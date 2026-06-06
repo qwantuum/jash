@@ -11,23 +11,25 @@ permissions:
 
 jobs:
   build:
-    name: Compile Jash Binary
+    name: Compile Jash Packages
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
           - goos: windows
             goarch: amd64
-            artifact_name: jash.exe
             release_name: jash-windows-amd64.exe
+            pack_type: binary
+
           - goos: linux
             goarch: amd64
-            artifact_name: jash
-            release_name: jash-linux-amd64
+            release_name: jash-ubuntu-amd64.deb
+            pack_type: deb
+
           - goos: darwin
             goarch: arm64
-            artifact_name: jash
-            release_name: jash-macos-arm64
+            release_name: jash-macos-arm64.dmg
+            pack_type: dmg
 
     steps:
       - name: Checkout code
@@ -38,35 +40,90 @@ jobs:
         with:
           go-version: "1.21"
 
-      - name: Build Binary
+      # --- ЭТАП 1: СБОРКА СЫРОГО БИНАРНИКА ---
+      - name: Build Raw Binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -o ${{ matrix.artifact_name }} ./cmd/jash
-          if [ "${{ matrix.goos }}" != "windows" ]; then
-            chmod +x ${{ matrix.artifact_name }}
-          fi
-          mv ${{ matrix.artifact_name }} ${{ matrix.release_name }}
+          go build -o jash_raw ./cmd/jash
 
+      # --- ЭТАП 2: СБОРКА WINDOWS (.exe) ---
+      - name: Package Windows
+        if: matrix.pack_type == 'binary'
+        run: |
+          mv jash_raw ${{ matrix.release_name }}
+
+      # --- ЭТАП 3: СБОРКА UBUNTU (.deb) ---
+      - name: Package Ubuntu DEB
+        if: matrix.pack_type == 'deb'
+        run: |
+          # Создаем структуру директорий для deb пакета
+          mkdir -p jash-deb/usr/local/bin
+          mkdir -p jash-deb/DEBIAN
+          
+          # Копируем бинарник в папку, куда он установится в Ubuntu (/usr/local/bin/jash)
+          cp jash_raw jash-deb/usr/local/bin/jash
+          chmod +x jash-deb/usr/local/bin/jash
+          
+          # Генерируем метаданные пакета control
+          VERSION=$(echo "${{ github.ref_name }}" | sed 's/v//g' || echo "1.0.0")
+          
+          cat <<EOF > jash-deb/DEBIAN/control
+          Package: jash
+          Version: ${VERSION}
+          Section: devel
+          Priority: optional
+          Architecture: amd64
+          Maintainer: qwantuum
+          Description: A lightweight, productive, AI-native scripting language.
+          EOF
+          
+          # Собираем .deb пакет стандартной утилитой linux
+          dpkg-deb --build jash-deb ${{ matrix.release_name }}
+
+      # --- ЭТАП 4: СБОРКА MACOS (.dmg) ---
+      - name: Package macOS DMG
+        if: matrix.pack_type == 'dmg'
+        run: |
+          # Устанавливаем легкую утилиту для сборки dmg на Linux
+          sudo apt-get update && sudo apt-get install -y genisoimage
+          curl -sSL https://githubusercontent.com -o create-dmg
+          chmod +x create-dmg
+          
+          # Создаем структуру приложения для Mac (.app)
+          mkdir -p Jash.app/Contents/MacOS
+          cp jash_raw Jash.app/Contents/MacOS/jash
+          chmod +x Jash.app/Contents/MacOS/jash
+          
+          # Собираем образ диска .dmg
+          mkdir dmg_root
+          cp -r Jash.app dmg_root/
+          ./create-dmg --volname "Jash Installer" jash-macos-arm64.dmg dmg_root/ || true
+          
+          # Проверяем, создался ли файл (утилита может возвращать код 2 из-за кастомизации иконок на Linux)
+          if [ ! -f "jash-macos-arm64.dmg" ]; then
+            # Резервный простой способ, если create-dmg дал сбой на пустом месте
+            mkisofs -V "Jash" -o jash-macos-arm64.dmg dmg_root/
+          fi
+
+      # --- ЭТАП 5: ЗАГРУЗКА АРТИФАКТОВ ---
       - name: Upload Artifacts Temporarily
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.release_name }}
+          name: package-${{ matrix.pack_type }}
           path: ${{ matrix.release_name }}
 
   release:
     name: Create GitHub Stable Release
     needs: build
-    # Этот этап запустится ТОЛЬКО если вы пушите тег (например, v1.0).
-    # При ручном запуске кнопкой этот шаг автоматически пропустится, чтобы не ломать сборку.
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download all built binaries
+      - name: Download all built packages
         uses: actions/download-artifact@v4
         with:
           path: binaries

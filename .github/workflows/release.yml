@@ -14,6 +14,7 @@ jobs:
     name: Compile Jash Packages
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false # Если один пакет упадет, остальные все равно дособираются
       matrix:
         include:
           - goos: windows
@@ -28,8 +29,8 @@ jobs:
 
           - goos: darwin
             goarch: arm64
-            release_name: jash-macos-arm64.dmg
-            pack_type: dmg
+            release_name: jash-macos-arm64.zip
+            pack_type: zip
 
     steps:
       - name: Checkout code
@@ -54,7 +55,7 @@ jobs:
         run: |
           mv jash_raw ${{ matrix.release_name }}
 
-                # --- ЭТАП 3: СБОРКА UBUNTU (.deb) ---
+      # --- ЭТАП 3: СБОРКА UBUNTU (.deb) ---
       - name: Package Ubuntu DEB
         if: matrix.pack_type == 'deb'
         run: |
@@ -86,31 +87,14 @@ jobs:
           # Собираем .deb пакет
           dpkg-deb --build jash-deb ${{ matrix.release_name }}
 
-
-      # --- ЭТАП 4: СБОРКА MACOS (.dmg) ---
-      - name: Package macOS DMG
-        if: matrix.pack_type == 'dmg'
+      # --- ЭТАП 4: СБОРКА MACOS (.zip) ---
+      - name: Package macOS ZIP
+        if: matrix.pack_type == 'zip'
         run: |
-          # Устанавливаем легкую утилиту для сборки dmg на Linux
-          sudo apt-get update && sudo apt-get install -y genisoimage
-          curl -sSL https://githubusercontent.com -o create-dmg
-          chmod +x create-dmg
-          
-          # Создаем структуру приложения для Mac (.app)
-          mkdir -p Jash.app/Contents/MacOS
-          cp jash_raw Jash.app/Contents/MacOS/jash
-          chmod +x Jash.app/Contents/MacOS/jash
-          
-          # Собираем образ диска .dmg
-          mkdir dmg_root
-          cp -r Jash.app dmg_root/
-          ./create-dmg --volname "Jash Installer" jash-macos-arm64.dmg dmg_root/ || true
-          
-          # Проверяем, создался ли файл (утилита может возвращать код 2 из-за кастомизации иконок на Linux)
-          if [ ! -f "jash-macos-arm64.dmg" ]; then
-            # Резервный простой способ, если create-dmg дал сбой на пустом месте
-            mkisofs -V "Jash" -o jash-macos-arm64.dmg dmg_root/
-          fi
+          mkdir -p macos_root
+          cp jash_raw macos_root/jash
+          chmod +x macos_root/jash
+          zip -r ${{ matrix.release_name }} macos_root
 
       # --- ЭТАП 5: ЗАГРУЗКА АРТИФАКТОВ ---
       - name: Upload Artifacts Temporarily

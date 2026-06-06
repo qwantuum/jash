@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/qwantuum/jash/pkg/ast"
 	"github.com/qwantuum/jash/pkg/token"
@@ -563,5 +562,3 @@ func precedenceOf(t token.TokenType) int {
 		return LOWEST
 	}
 }
-
-

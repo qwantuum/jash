@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Jash Logo" width="250">
+</p>
+
+
 # Jash Language
 
 **JSON + Bash/Python** — A clean, indentation-based scripting language with first-class JSON support, built-in HTTP serving, and mock AI predictions.

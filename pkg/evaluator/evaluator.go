@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jash-lang/jash/pkg/ast"
+	"github.com/qwantuum/jash/pkg/ast"
 )
 
 type ObjectType string

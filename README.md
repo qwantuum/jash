@@ -37,7 +37,7 @@ serve(8080, handle_request)
 
 ```bash
 # Clone the repository
-git clone https://github.com/jash-lang/jash.git
+git clone https://github.com/qwantuum/jash.git
 cd jash
 
 # Build the interpreter
@@ -199,7 +199,7 @@ print(analyze("Great product!"))
 ## Building from Source
 
 ```bash
-git clone https://github.com/jash-lang/jash.git
+git clone https://github.com/qwantuum/jash.git
 cd jash
 go build -o jash ./cmd/jash
 ```

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jash-lang/jash/pkg/evaluator"
-	"github.com/jash-lang/jash/pkg/lexer"
-	"github.com/jash-lang/jash/pkg/parser"
+	"github.com/qwantuum/jash/pkg/evaluator"
+	"github.com/qwantuum/jash/pkg/lexer"
+	"github.com/qwantuum/jash/pkg/parser"
 )
 
 func main() {

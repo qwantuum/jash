@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jash-lang/jash/pkg/token"
+	"github.com/qwantuum/jash/pkg/token"
 )
 
 type Lexer struct {

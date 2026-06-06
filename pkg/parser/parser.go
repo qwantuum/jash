@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jash-lang/jash/pkg/ast"
-	"github.com/jash-lang/jash/pkg/token"
+	"github.com/qwantuum/jash/pkg/ast"
+	"github.com/qwantuum/jash/pkg/token"
 )
 
 type (

@@ -54,7 +54,7 @@ jobs:
         run: |
           mv jash_raw ${{ matrix.release_name }}
 
-      # --- ЭТАП 3: СБОРКА UBUNTU (.deb) ---
+                # --- ЭТАП 3: СБОРКА UBUNTU (.deb) ---
       - name: Package Ubuntu DEB
         if: matrix.pack_type == 'deb'
         run: |
@@ -62,12 +62,16 @@ jobs:
           mkdir -p jash-deb/usr/local/bin
           mkdir -p jash-deb/DEBIAN
           
-          # Копируем бинарник в папку, куда он установится в Ubuntu (/usr/local/bin/jash)
+          # Копируем бинарник в папку установки
           cp jash_raw jash-deb/usr/local/bin/jash
           chmod +x jash-deb/usr/local/bin/jash
           
-          # Генерируем метаданные пакета control
-          VERSION=$(echo "${{ github.ref_name }}" | sed 's/v//g' || echo "1.0.0")
+          # Безопасное получение версии: если это тег, убираем 'v'. Если ветка, ставим 1.0.0
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=$(echo "${{ github.ref_name }}" | sed 's/v//g')
+          else
+            VERSION="1.0.0"
+          fi
           
           cat <<EOF > jash-deb/DEBIAN/control
           Package: jash
@@ -79,8 +83,9 @@ jobs:
           Description: A lightweight, productive, AI-native scripting language.
           EOF
           
-          # Собираем .deb пакет стандартной утилитой linux
+          # Собираем .deb пакет
           dpkg-deb --build jash-deb ${{ matrix.release_name }}
+
 
       # --- ЭТАП 4: СБОРКА MACOS (.dmg) ---
       - name: Package macOS DMG

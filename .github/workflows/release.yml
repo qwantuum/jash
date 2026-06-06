@@ -1,0 +1,81 @@
+name: Build and Stable Release Jash v1.0
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Compile Jash Binary
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            artifact_name: jash.exe
+            release_name: jash-windows-amd64.exe
+          - goos: linux
+            goarch: amd64
+            artifact_name: jash
+            release_name: jash-linux-amd64
+          - goos: darwin
+            goarch: arm64
+            artifact_name: jash
+            release_name: jash-macos-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build Binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go build -o ${{ matrix.artifact_name }} ./cmd/jash
+          if [ "${{ matrix.goos }}" != "windows" ]; then
+            chmod +x ${{ matrix.artifact_name }}
+          fi
+          mv ${{ matrix.artifact_name }} ${{ matrix.release_name }}
+
+      - name: Upload Artifacts Temporarily
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.release_name }}
+          path: ${{ matrix.release_name }}
+
+  release:
+    name: Create GitHub Stable Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all built binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: binaries
+          merge-multiple: true
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: binaries/*
+          name: Jash Language Official ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

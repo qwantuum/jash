@@ -188,6 +188,13 @@ func (e *Environment) loadBuiltins() {
 		},
 	}
 	e.store["ai"] = aiObj
+
+	jashUIObj := &JSONObject{
+		Pairs: map[string]Object{
+			"window": &Builtin{Fn: uiWindowFunc},
+		},
+	}
+	e.store["jash_ui"] = jashUIObj
 }
 
 var (

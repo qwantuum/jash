@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -704,6 +705,21 @@ func applyFunction(fn Object, args []Object) Object {
 	case *Function:
 		PushCallStack(f.Name)
 
+		if JITEnabled && GlobalJIT != nil {
+			GlobalJIT.RecordCall(f.Name)
+			if GlobalJIT.IsCompiled(f.Name) {
+				result := GlobalJIT.Execute(f.Name, args)
+				PopCallStack()
+				if isError(result) {
+					os.Stderr.WriteString(result.Inspect() + "\n")
+				}
+				return result
+			}
+			if GlobalJIT.ShouldCompile(f.Name) {
+				GlobalJIT.Compile(f.Name, f.Parameters, f.Body)
+			}
+		}
+
 		env := NewEnclosedEnvironment(f.Env)
 		for i, param := range f.Parameters {
 			if i < len(args) {
@@ -728,6 +744,10 @@ func applyFunction(fn Object, args []Object) Object {
 	default:
 		return &Error{Message: fmt.Sprintf("not a function: %s", fn.Type())}
 	}
+}
+
+func ApplyFunction(fn Object, args []Object) Object {
+	return applyFunction(fn, args)
 }
 
 func nativeBoolToBooleanObject(b bool) *Boolean {

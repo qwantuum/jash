@@ -13,21 +13,26 @@ func main() {
 	args := os.Args[1:]
 
 	stacktrace := false
+	jitEnabled := false
 	filename := ""
 	for _, a := range args {
 		if a == "--stacktrace" {
 			stacktrace = true
+		} else if a == "--jit" {
+			jitEnabled = true
 		} else if filename == "" {
 			filename = a
 		}
 	}
 
 	if filename == "" {
-		fmt.Println("Usage: jash [--stacktrace] <file.jash>")
+		fmt.Println("Usage: jash [--stacktrace] [--jit] <file.jash>")
 		os.Exit(1)
 	}
 
 	evaluator.StacktraceEnabled = stacktrace
+	evaluator.JITEnabled = jitEnabled
+	evaluator.InitJIT()
 
 	source, err := os.ReadFile(filename)
 	if err != nil {

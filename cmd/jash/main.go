@@ -10,12 +10,26 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: jash <file.jash>")
+	args := os.Args[1:]
+
+	stacktrace := false
+	filename := ""
+	for _, a := range args {
+		if a == "--stacktrace" {
+			stacktrace = true
+		} else if filename == "" {
+			filename = a
+		}
+	}
+
+	if filename == "" {
+		fmt.Println("Usage: jash [--stacktrace] <file.jash>")
 		os.Exit(1)
 	}
 
-	source, err := os.ReadFile(os.Args[1])
+	evaluator.StacktraceEnabled = stacktrace
+
+	source, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
 		os.Exit(1)
@@ -45,6 +59,10 @@ func main() {
 	if result != nil {
 		switch r := result.(type) {
 		case *evaluator.Error:
+			if trace := evaluator.GetStackTrace(); trace != "" {
+				fmt.Fprint(os.Stderr, trace)
+			}
+			evaluator.ClearCallStack()
 			fmt.Fprintf(os.Stderr, "Runtime error: %s\n", r.Message)
 			os.Exit(1)
 		default:

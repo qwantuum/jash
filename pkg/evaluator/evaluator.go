@@ -13,6 +13,46 @@ import (
 	"github.com/qwantuum/jash/pkg/ast"
 )
 
+var StacktraceEnabled bool
+var callStack []string
+
+func PushCallStack(name string) {
+	if StacktraceEnabled {
+		callStack = append(callStack, name)
+		fmt.Printf("%s> enter %s\n", indent(len(callStack)-1), name)
+	}
+}
+
+func PopCallStack() {
+	if StacktraceEnabled && len(callStack) > 0 {
+		fmt.Printf("%s< exit %s\n", indent(len(callStack)-1), callStack[len(callStack)-1])
+		callStack = callStack[:len(callStack)-1]
+	}
+}
+
+func indent(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	return strings.Repeat("  ", n)
+}
+
+func GetStackTrace() string {
+	if !StacktraceEnabled || len(callStack) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("Stack trace (most recent call last):\n")
+	for i := len(callStack) - 1; i >= 0; i-- {
+		b.WriteString(fmt.Sprintf("  %s()\n", callStack[i]))
+	}
+	return b.String()
+}
+
+func ClearCallStack() {
+	callStack = nil
+}
+
 type ObjectType string
 
 const (
@@ -661,6 +701,8 @@ func evalExpressions(exps []ast.Expression, env *Environment) []Object {
 func applyFunction(fn Object, args []Object) Object {
 	switch f := fn.(type) {
 	case *Function:
+		PushCallStack(f.Name)
+
 		env := NewEnclosedEnvironment(f.Env)
 		for i, param := range f.Parameters {
 			if i < len(args) {
@@ -668,6 +710,11 @@ func applyFunction(fn Object, args []Object) Object {
 			}
 		}
 		result := Eval(f.Body, env)
+		if isError(result) {
+			PopCallStack()
+			return result
+		}
+		PopCallStack()
 		if rv, ok := result.(*ReturnValue); ok {
 			return rv.Value
 		}
@@ -957,7 +1004,8 @@ func serveFunc(args ...Object) Object {
 
 	addr := fmt.Sprintf(":%d", port.Value)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		bodyBytes := make([]byte, 0)
 		if r.Body != nil {
 			var readErr error
@@ -990,7 +1038,7 @@ func serveFunc(args ...Object) Object {
 	})
 
 	fmt.Printf("Jash server listening on http://localhost%s\n", addr)
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		return &Error{Message: fmt.Sprintf("server error: %s", err)}
 	}
 

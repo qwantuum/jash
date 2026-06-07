@@ -75,7 +75,9 @@ func New(tokens []token.Token) *Parser {
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
 	p.registerInfix(token.DOT, p.parseMemberAccess)
 
-	p.nextToken()
+	if len(tokens) > 0 {
+		p.peekToken = tokens[0]
+	}
 	p.nextToken()
 
 	return p
@@ -136,6 +138,8 @@ func (p *Parser) ParseProgram() *ast.Program {
 		stmt := p.parseStatement()
 		if stmt != nil {
 			program.Statements = append(program.Statements, stmt)
+		} else {
+			p.nextToken()
 		}
 	}
 

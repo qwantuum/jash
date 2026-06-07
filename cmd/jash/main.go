@@ -15,8 +15,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	filename := os.Args[1]
-	source, err := os.ReadFile(filename)
+	source, err := os.ReadFile(os.Args[1])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading file: %s\n", err)
 		os.Exit(1)

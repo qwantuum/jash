@@ -1,2 +1,4 @@
-#print function
-print("hello, jash!")
+def hello()
+    print("hi")
+    
+hello()

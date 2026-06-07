@@ -37,10 +37,8 @@ func (l *Lexer) Tokenize() ([]token.Token, []string) {
 		if beginningOfLine {
 			indent := l.countIndent()
 
-			if l.ch == '\n' || l.ch == '\r' || l.ch == 0 {
-				if l.ch != 0 {
-					l.readChar()
-				}
+			if l.ch == '\n' || l.ch == '\r' {
+				l.readChar()
 				beginningOfLine = true
 				continue
 			}
@@ -215,7 +213,6 @@ func (l *Lexer) handleIndent(indent int) {
 		l.emitToken(token.INDENT, fmt.Sprintf("%d", indent))
 	} else if indent < top {
 		for len(l.indentStack) > 1 && indent < l.indentStack[len(l.indentStack)-1] {
-			l.indentStack = l.indentStack[:len(l.indentStack)-1]
 			l.emitDedent()
 		}
 		if indent != l.indentStack[len(l.indentStack)-1] {
@@ -242,6 +239,7 @@ func (l *Lexer) emitDedent() {
 		Line:    l.line,
 		Column:  l.column,
 	})
+	l.indentStack = l.indentStack[:len(l.indentStack)-1]
 }
 
 func (l *Lexer) skipComment() {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
@@ -183,6 +184,7 @@ func (e *Environment) loadBuiltins() {
 	aiObj := &JSONObject{
 		Pairs: map[string]Object{
 			"predict": &Builtin{Fn: aiPredictFunc},
+			"ollama":  &Builtin{Fn: ollamaFunc},
 		},
 	}
 	e.store["ai"] = aiObj
@@ -749,6 +751,185 @@ func aiPredictFunc(args ...Object) Object {
 			"model":      &String{Value: "Jash-AI v1.0"},
 			"input":      &String{Value: input},
 		},
+	}
+}
+
+func ollamaFunc(args ...Object) Object {
+	if len(args) != 1 {
+		return &Error{Message: "ollama() requires exactly 1 argument: the Ollama server URL"}
+	}
+
+	baseURL, ok := args[0].(*String)
+	if !ok {
+		return &Error{Message: "ollama() argument must be a string URL"}
+	}
+
+	url := strings.TrimRight(baseURL.Value, "/")
+
+	return &JSONObject{
+		Pairs: map[string]Object{
+			"generate": &Builtin{Fn: makeOllamaGenerate(url)},
+			"chat":     &Builtin{Fn: makeOllamaChat(url)},
+			"list":     &Builtin{Fn: makeOllamaList(url)},
+		},
+	}
+}
+
+func makeOllamaGenerate(baseURL string) func(args ...Object) Object {
+	return func(args ...Object) Object {
+		if len(args) < 2 {
+			return &Error{Message: "ollama.generate() requires at least 2 arguments: model and prompt"}
+		}
+
+		model, ok := args[0].(*String)
+		if !ok {
+			return &Error{Message: "first argument to ollama.generate() must be a string (model name)"}
+		}
+
+		prompt, ok := args[1].(*String)
+		if !ok {
+			return &Error{Message: "second argument to ollama.generate() must be a string (prompt)"}
+		}
+
+		body := map[string]interface{}{
+			"model":  model.Value,
+			"prompt": prompt.Value,
+			"stream": false,
+		}
+
+		return ollamaRequest(baseURL+"/api/generate", body)
+	}
+}
+
+func makeOllamaChat(baseURL string) func(args ...Object) Object {
+	return func(args ...Object) Object {
+		if len(args) < 2 {
+			return &Error{Message: "ollama.chat() requires at least 2 arguments: model and messages array"}
+		}
+
+		model, ok := args[0].(*String)
+		if !ok {
+			return &Error{Message: "first argument to ollama.chat() must be a string (model name)"}
+		}
+
+		messages, ok := args[1].(*JSONArray)
+		if !ok {
+			return &Error{Message: "second argument to ollama.chat() must be an array of message objects"}
+		}
+
+		body := map[string]interface{}{
+			"model":    model.Value,
+			"messages": jashToGoObject(messages),
+			"stream":   false,
+		}
+
+		return ollamaRequest(baseURL+"/api/chat", body)
+	}
+}
+
+func makeOllamaList(baseURL string) func(args ...Object) Object {
+	return func(args ...Object) Object {
+		resp, err := http.Get(baseURL + "/api/tags")
+		if err != nil {
+			return &Error{Message: fmt.Sprintf("ollama list request failed: %s", err)}
+		}
+		defer resp.Body.Close()
+
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return &Error{Message: fmt.Sprintf("failed to read ollama response: %s", err)}
+		}
+
+		var result map[string]interface{}
+		if err := json.Unmarshal(respBody, &result); err != nil {
+			return &Error{Message: fmt.Sprintf("failed to parse ollama response: %s", err)}
+		}
+
+		return goToJashObject(result)
+	}
+}
+
+func ollamaRequest(endpoint string, body map[string]interface{}) Object {
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return &Error{Message: fmt.Sprintf("failed to marshal request: %s", err)}
+	}
+
+	resp, err := http.Post(endpoint, "application/json", bytes.NewReader(jsonBody))
+	if err != nil {
+		return &Error{Message: fmt.Sprintf("ollama request failed: %s", err)}
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return &Error{Message: fmt.Sprintf("failed to read ollama response: %s", err)}
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return &Error{Message: fmt.Sprintf("failed to parse ollama response: %s", err)}
+	}
+
+	return goToJashObject(result)
+}
+
+func goToJashObject(v interface{}) Object {
+	switch val := v.(type) {
+	case string:
+		return &String{Value: val}
+	case float64:
+		if val == float64(int64(val)) {
+			return &Integer{Value: int64(val)}
+		}
+		return &Float{Value: val}
+	case bool:
+		return nativeBoolToBooleanObject(val)
+	case nil:
+		return NULL
+	case map[string]interface{}:
+		pairs := make(map[string]Object, len(val))
+		for k, vv := range val {
+			pairs[k] = goToJashObject(vv)
+		}
+		return &JSONObject{Pairs: pairs}
+	case []interface{}:
+		elems := make([]Object, len(val))
+		for i, vv := range val {
+			elems[i] = goToJashObject(vv)
+		}
+		return &JSONArray{Elements: elems}
+	default:
+		return &String{Value: fmt.Sprintf("%v", v)}
+	}
+}
+
+func jashToGoObject(obj Object) interface{} {
+	switch o := obj.(type) {
+	case *Integer:
+		return o.Value
+	case *Float:
+		return o.Value
+	case *String:
+		return o.Value
+	case *Boolean:
+		return o.Value
+	case *Null:
+		return nil
+	case *JSONObject:
+		m := make(map[string]interface{}, len(o.Pairs))
+		for k, v := range o.Pairs {
+			m[k] = jashToGoObject(v)
+		}
+		return m
+	case *JSONArray:
+		arr := make([]interface{}, len(o.Elements))
+		for i, v := range o.Elements {
+			arr[i] = jashToGoObject(v)
+		}
+		return arr
+	default:
+		return o.Inspect()
 	}
 }
 

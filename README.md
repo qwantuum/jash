@@ -141,6 +141,29 @@ data = analyze("Great product!")
 print(data)
 ```
 
+### Ollama Integration
+
+Connect to a local or remote [Ollama](https://ollama.ai) instance for LLM inference:
+
+```jash
+client = ai.ollama("http://localhost:11434")
+
+# Generate a completion
+result = client.generate("llama2", "Hello!")
+print(result.response)
+
+# Chat with messages
+messages = [
+    {"role": "user", "content": "Hi!"}
+]
+reply = client.chat("llama2", messages)
+print(reply.message.content)
+
+# List available models
+models = client.list()
+print(models)
+```
+
 ### Built-in Functions
 
 | Function   | Description                              |
@@ -150,6 +173,7 @@ print(data)
 | `type()`   | Returns the type name of a value         |
 | `serve()`  | Starts an HTTP server on a given port    |
 | `ai.predict()` | Returns a mock AI prediction result  |
+| `ai.ollama()` | Creates an Ollama client for LLM inference |
 
 ---
 

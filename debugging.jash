@@ -1,5 +1,0 @@
-print("test2")
-def hello()
-    print(hello)
-
-hello()

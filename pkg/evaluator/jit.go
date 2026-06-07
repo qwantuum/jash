@@ -7,34 +7,22 @@ import (
 	"github.com/qwantuum/jash/pkg/ast"
 )
 
-var JITEnabled bool
-
 type CompiledFunc struct {
 	instructions []Instruction
 	constants    []interface{}
+	varNames     map[int]string
 }
 
 type JITManager struct {
-	callCounts map[string]int
-	compiled   map[string]*CompiledFunc
-	threshold  int
+	compiled map[string]*CompiledFunc
 }
 
 var GlobalJIT *JITManager
 
 func InitJIT() {
 	GlobalJIT = &JITManager{
-		callCounts: make(map[string]int),
-		compiled:   make(map[string]*CompiledFunc),
-		threshold:  3,
+		compiled: make(map[string]*CompiledFunc),
 	}
-}
-
-func (jm *JITManager) RecordCall(name string) {
-	if !JITEnabled {
-		return
-	}
-	jm.callCounts[name]++
 }
 
 func (jm *JITManager) IsCompiled(name string) bool {
@@ -43,16 +31,12 @@ func (jm *JITManager) IsCompiled(name string) bool {
 }
 
 func (jm *JITManager) Compile(name string, params []*ast.Identifier, body *ast.BlockStatement) bool {
-	if !JITEnabled {
-		return false
-	}
-
 	c := newCompiler()
 	for _, p := range params {
 		c.getVarIndex(p.Value)
 	}
 
-	instructions, constants, err := c.Compile(body)
+	instructions, constants, varNames, err := c.Compile(body)
 	if err != nil {
 		return false
 	}
@@ -60,6 +44,7 @@ func (jm *JITManager) Compile(name string, params []*ast.Identifier, body *ast.B
 	jm.compiled[name] = &CompiledFunc{
 		instructions: instructions,
 		constants:    constants,
+		varNames:     varNames,
 	}
 
 	if os.Getenv("JASH_JIT_DEBUG") == "1" {
@@ -69,7 +54,7 @@ func (jm *JITManager) Compile(name string, params []*ast.Identifier, body *ast.B
 	return true
 }
 
-func (jm *JITManager) Execute(name string, args []Object) Object {
+func (jm *JITManager) Execute(name string, args []Object, env *Environment) Object {
 	cf, ok := jm.compiled[name]
 	if !ok {
 		return &Error{Message: fmt.Sprintf("JIT: %s not compiled", name)}
@@ -80,22 +65,11 @@ func (jm *JITManager) Execute(name string, args []Object) Object {
 		globals[i] = arg
 	}
 
-	vm := newVM(cf.instructions, cf.constants, globals)
+	vm := newVM(cf.instructions, cf.constants, cf.varNames, globals, env)
 	result := vm.Run()
 
 	if result == nil {
 		return NULL
 	}
 	return result
-}
-
-func (jm *JITManager) ShouldCompile(name string) bool {
-	count, ok := jm.callCounts[name]
-	if !ok {
-		return false
-	}
-	if jm.IsCompiled(name) {
-		return false
-	}
-	return count >= jm.threshold
 }

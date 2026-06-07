@@ -7,19 +7,23 @@ import (
 type vm struct {
 	instructions []Instruction
 	constants    []interface{}
+	varNames     map[int]string
 	ip           int
 	stack        []Object
 	sp           int
 	globals      []Object
+	env          *Environment
 }
 
-func newVM(instructions []Instruction, constants []interface{}, globals []Object) *vm {
+func newVM(instructions []Instruction, constants []interface{}, varNames map[int]string, globals []Object, env *Environment) *vm {
 	return &vm{
 		instructions: instructions,
 		constants:    constants,
+		varNames:     varNames,
 		stack:        make([]Object, 1024),
 		sp:           0,
 		globals:      globals,
+		env:          env,
 	}
 }
 
@@ -33,10 +37,21 @@ func (vm *vm) Run() Object {
 			vm.push(vm.toJashObject(vm.constants[inst.Arg]))
 
 		case OpLoad:
-			vm.push(vm.globals[inst.Arg])
+			obj := vm.globals[inst.Arg]
+			if obj == nil {
+				name := vm.varNames[inst.Arg]
+				if name != "" {
+					obj, _ = vm.env.Get(name)
+				}
+			}
+			vm.push(obj)
 
 		case OpStore:
 			val := vm.pop()
+			name := vm.varNames[inst.Arg]
+			if name != "" {
+				vm.env.Set(name, val)
+			}
 			vm.globals[inst.Arg] = val
 
 		case OpAdd:

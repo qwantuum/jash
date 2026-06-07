@@ -7,7 +7,6 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -329,6 +328,11 @@ func evalFunctionStatement(node *ast.FunctionStatement, env *Environment) Object
 		Body:       node.Body,
 		Env:        env,
 	}
+
+	if GlobalJIT != nil {
+		GlobalJIT.Compile(node.Name.Value, node.Parameters, node.Body)
+	}
+
 	return env.Set(node.Name.Value, fn)
 }
 
@@ -705,19 +709,16 @@ func applyFunction(fn Object, args []Object) Object {
 	case *Function:
 		PushCallStack(f.Name)
 
-		if JITEnabled && GlobalJIT != nil {
-			GlobalJIT.RecordCall(f.Name)
-			if GlobalJIT.IsCompiled(f.Name) {
-				result := GlobalJIT.Execute(f.Name, args)
-				PopCallStack()
-				if isError(result) {
-					os.Stderr.WriteString(result.Inspect() + "\n")
+		if GlobalJIT != nil && GlobalJIT.IsCompiled(f.Name) {
+			env := NewEnclosedEnvironment(f.Env)
+			for i, param := range f.Parameters {
+				if i < len(args) {
+					env.Set(param.Value, args[i])
 				}
-				return result
 			}
-			if GlobalJIT.ShouldCompile(f.Name) {
-				GlobalJIT.Compile(f.Name, f.Parameters, f.Body)
-			}
+			result := GlobalJIT.Execute(f.Name, args, env)
+			PopCallStack()
+			return result
 		}
 
 		env := NewEnclosedEnvironment(f.Env)

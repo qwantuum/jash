@@ -10,19 +10,22 @@ type compiler struct {
 	instructions []Instruction
 	constants    []interface{}
 	varIndex     map[string]int
+	varNames     map[int]string
 	varCount     int
 }
 
 func newCompiler() *compiler {
 	return &compiler{
 		varIndex: make(map[string]int),
+		varNames: make(map[int]string),
 	}
 }
 
-func (c *compiler) Compile(node ast.Node) ([]Instruction, []interface{}, error) {
+func (c *compiler) Compile(node ast.Node) ([]Instruction, []interface{}, map[int]string, error) {
 	c.instructions = nil
 	c.constants = nil
 	c.varIndex = make(map[string]int)
+	c.varNames = make(map[int]string)
 	c.varCount = 0
 
 	switch n := node.(type) {
@@ -34,7 +37,7 @@ func (c *compiler) Compile(node ast.Node) ([]Instruction, []interface{}, error) 
 
 	c.emit(OpReturn)
 
-	return c.instructions, c.constants, nil
+	return c.instructions, c.constants, c.varNames, nil
 }
 
 func (c *compiler) compileBlock(block *ast.BlockStatement) {
@@ -192,6 +195,7 @@ func (c *compiler) getVarIndex(name string) int {
 	idx := c.varCount
 	c.varCount++
 	c.varIndex[name] = idx
+	c.varNames[idx] = name
 	return idx
 }
 

@@ -13,6 +13,8 @@ def handle_request(req)
     return data
 
 serve(8080, handle_request)
+
+При первом запуске возможна задержка из-за проверки Windows Defender / SmartScreen. Это нормально для неподписанных Go-бинарников
 ```
 
 ---

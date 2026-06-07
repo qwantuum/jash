@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -78,6 +79,7 @@ func uiWindowFunc(args ...Object) Object {
 			"add_button": &Builtin{Fn: uiMakeButton(id)},
 			"add_entry":  &Builtin{Fn: uiMakeAdder(id, "entry")},
 			"add_text":   &Builtin{Fn: uiMakeAdder(id, "text-area")},
+			"add_photo":  &Builtin{Fn: uiMakePhoto(id)},
 			"get_value":  &Builtin{Fn: uiMakeGetValue(id)},
 			"run":        &Builtin{Fn: uiMakeRun(id)},
 			"close":      &Builtin{Fn: uiMakeClose(id)},
@@ -111,6 +113,54 @@ func uiMakeAdder(winID, widgetType string) func(args ...Object) Object {
 			return &JSONObject{Pairs: map[string]Object{"id": &String{Value: wid}}}
 		}
 		return NULL
+	}
+}
+
+func uiMakePhoto(winID string) func(args ...Object) Object {
+	return func(args ...Object) Object {
+		uiMu.Lock()
+		win, ok := windows[winID]
+		uiMu.Unlock()
+		if !ok {
+			return &Error{Message: "window not found"}
+		}
+		if len(args) < 1 {
+			return &Error{Message: "add_photo() requires a URL or file path"}
+		}
+		src, ok := args[0].(*String)
+		if !ok {
+			return &Error{Message: "photo source must be a string"}
+		}
+		width := 0
+		height := 0
+		if len(args) > 1 {
+			if w, ok := args[1].(*Integer); ok {
+				width = int(w.Value)
+			}
+		}
+		if len(args) > 2 {
+			if h, ok := args[2].(*Integer); ok {
+				height = int(h.Value)
+			}
+		}
+
+		win.mu.Lock()
+		win.nextID++
+		wid := fmt.Sprintf("%s_w%d", winID, win.nextID)
+		win.Widgets = append(win.Widgets, UIWidget{
+			ID:   wid,
+			Type: "photo",
+			Text: src.Value,
+		})
+		win.mu.Unlock()
+
+		return &JSONObject{
+			Pairs: map[string]Object{
+				"id":     &String{Value: wid},
+				"width":  &Integer{Value: int64(width)},
+				"height": &Integer{Value: int64(height)},
+			},
+		}
 	}
 }
 
@@ -288,18 +338,35 @@ func openBrowser(url string) {
 	}
 }
 
+func isImageURL(s string) bool {
+	exts := []string{".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico"}
+	lower := strings.ToLower(s)
+	for _, ext := range exts {
+		if strings.HasSuffix(lower, ext) {
+			return true
+		}
+	}
+	return false
+}
+
 func generateUIHTML(win *UIWindowState) string {
 	var widgetsHTML string
 	for _, w := range win.Widgets {
 		switch w.Type {
 		case "label":
-			widgetsHTML += fmt.Sprintf(`<div class="label">%s</div>`, esc(w.Text))
+			if isImageURL(w.Text) {
+				widgetsHTML += fmt.Sprintf(`<div class="photo-container"><img class="photo" src="%s" alt="photo"></div>`, esc(w.Text))
+			} else {
+				widgetsHTML += fmt.Sprintf(`<div class="label">%s</div>`, esc(w.Text))
+			}
 		case "button":
 			widgetsHTML += fmt.Sprintf(`<button class="btn" onclick="clickWidget('%s')">%s</button>`, w.ID, esc(w.Text))
 		case "entry":
 			widgetsHTML += fmt.Sprintf(`<input class="entry" id="%s" type="text" value="%s" oninput="updateValue('%s',this.value)">`, w.ID, esc(w.Text), w.ID)
 		case "text-area":
 			widgetsHTML += fmt.Sprintf(`<textarea class="text" id="%s" oninput="updateValue('%s',this.value)">%s</textarea>`, w.ID, w.ID, esc(w.Text))
+		case "photo":
+			widgetsHTML += fmt.Sprintf(`<div class="photo-container"><img class="photo" src="%s" alt="photo"></div>`, esc(w.Text))
 		}
 	}
 
@@ -312,14 +379,16 @@ func generateUIHTML(win *UIWindowState) string {
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f0f0;padding:20px;min-height:100vh}
-.window{max-width:%dpx;margin:0 auto;background:#fff;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,0.12);padding:24px;min-height:%dpx}
-.label{font-size:14px;color:#333;margin:10px 0 4px}
+.window{min-width:%dpx;width:fit-content;max-width:90vw;margin:0 auto;background:#fff;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,0.12);padding:24px;min-height:%dpx}
+.label{font-size:14px;color:#333;margin:10px 0 4px;white-space:pre-wrap;word-break:break-word}
 .btn{display:block;width:100%%;padding:10px 16px;margin:8px 0;background:#007aff;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;transition:background .15s}
 .btn:hover{background:#005bbf}
 .btn:disabled{opacity:.6;cursor:default}
 .entry,.text{display:block;width:100%%;padding:8px 12px;margin:4px 0 10px;border:1px solid #ccc;border-radius:6px;font-size:14px;font-family:inherit;outline:none;transition:border .15s}
 .entry:focus,.text:focus{border-color:#007aff}
 .text{min-height:80px;resize:vertical}
+.photo-container{margin:10px 0;text-align:center}
+.photo{max-width:100%%;height:auto;border-radius:8px;box-shadow:0 1px 8px rgba(0,0,0,0.1)}
 </style>
 </head>
 <body>

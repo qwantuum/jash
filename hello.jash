@@ -1,0 +1,6 @@
+win = jash_ui.window("Hello Window")
+win.add_label("hello!")
+win.add_label("https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/300px-PNG_transparency_demonstration_1.png")
+win.add_photo("https://i.pinimg.com/736x/81/dd/02/81dd020d5ddfc3b5ea08e67e50a5d46e.jpg")
+win.add_label("Это очень длинный текст, который должен растянуть окно по ширине, чтобы было видно что ширина меняется динамически, но я в этом не уверен")
+win.run()

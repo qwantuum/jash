@@ -161,7 +161,8 @@ func (f *Function) Inspect() string {
 }
 
 type Builtin struct {
-	Fn func(args ...Object) Object
+	Name string
+	Fn   func(args ...Object) Object
 }
 
 func (b *Builtin) Type() ObjectType { return BUILTIN_OBJ }
@@ -216,22 +217,22 @@ func (e *Environment) Set(name string, val Object) Object {
 }
 
 func (e *Environment) loadBuiltins() {
-	e.store["print"] = &Builtin{Fn: printFunc}
-	e.store["len"] = &Builtin{Fn: lenFunc}
-	e.store["serve"] = &Builtin{Fn: serveFunc}
-	e.store["type"] = &Builtin{Fn: typeFunc}
+	e.store["print"] = &Builtin{Name: "print", Fn: printFunc}
+	e.store["len"] = &Builtin{Name: "len", Fn: lenFunc}
+	e.store["serve"] = &Builtin{Name: "serve", Fn: serveFunc}
+	e.store["type"] = &Builtin{Name: "type", Fn: typeFunc}
 
 	aiObj := &JSONObject{
 		Pairs: map[string]Object{
-			"predict": &Builtin{Fn: aiPredictFunc},
-			"ollama":  &Builtin{Fn: ollamaFunc},
+			"predict": &Builtin{Name: "ai.predict", Fn: aiPredictFunc},
+			"ollama":  &Builtin{Name: "ai.ollama", Fn: ollamaFunc},
 		},
 	}
 	e.store["ai"] = aiObj
 
 	jashUIObj := &JSONObject{
 		Pairs: map[string]Object{
-			"window": &Builtin{Fn: uiWindowFunc},
+			"window": &Builtin{Name: "jash_ui.window", Fn: uiWindowFunc},
 		},
 	}
 	e.store["jash_ui"] = jashUIObj
@@ -720,7 +721,10 @@ func applyFunction(fn Object, args []Object) Object {
 		}
 		return result
 	case *Builtin:
-		return f.Fn(args...)
+		PushCallStack(f.Name)
+		result := f.Fn(args...)
+		PopCallStack()
+		return result
 	default:
 		return &Error{Message: fmt.Sprintf("not a function: %s", fn.Type())}
 	}
@@ -763,9 +767,6 @@ func printFunc(args ...Object) Object {
 		parts[i] = arg.Inspect()
 	}
 	fmt.Println(strings.Join(parts, " "))
-	if len(args) > 0 {
-		return args[len(args)-1]
-	}
 	return NULL
 }
 

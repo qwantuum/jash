@@ -190,8 +190,8 @@ func (p *Parser) parseFunctionStatement() *ast.FunctionStatement {
 		p.nextToken()
 	}
 
-	if !p.expect(token.COLON) {
-		return nil
+	if p.curTokenIs(token.RPAREN) {
+		p.nextToken()
 	}
 
 	stmt.Body = p.parseBlockBody()
@@ -232,10 +232,6 @@ func (p *Parser) parseIfStatement() *ast.IfStatement {
 
 	stmt.Condition = p.parseExpression(LOWEST)
 
-	if !p.expect(token.COLON) {
-		return nil
-	}
-
 	stmt.Body = p.parseBlockBody()
 	p.nextToken()
 
@@ -267,10 +263,6 @@ func (p *Parser) parseForStatement() *ast.ForStatement {
 
 	stmt.Iterable = p.parseExpression(LOWEST)
 
-	if !p.expect(token.COLON) {
-		return nil
-	}
-
 	stmt.Body = p.parseBlockBody()
 	p.nextToken()
 	return stmt
@@ -282,10 +274,6 @@ func (p *Parser) parseWhileStatement() *ast.WhileStatement {
 
 	stmt.Condition = p.parseExpression(LOWEST)
 
-	if !p.expect(token.COLON) {
-		return nil
-	}
-
 	stmt.Body = p.parseBlockBody()
 	p.nextToken()
 	return stmt
@@ -294,6 +282,11 @@ func (p *Parser) parseWhileStatement() *ast.WhileStatement {
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	stmt := &ast.ExpressionStatement{}
 	stmt.Expression = p.parseExpression(LOWEST)
+
+	if stmt.Expression == nil && p.curToken.Type != token.EOF {
+		p.nextToken()
+		return nil
+	}
 
 	if p.peekToken.Type == token.NEWLINE || p.peekToken.Type == token.DEDENT {
 		p.nextToken()
@@ -307,13 +300,22 @@ func (p *Parser) parseBlockBody() *ast.BlockStatement {
 		Statements: []ast.Statement{},
 	}
 
-	if !p.expect(token.NEWLINE) {
+	if p.curTokenIs(token.NEWLINE) {
+		p.nextToken()
+	} else if !p.expect(token.NEWLINE) {
 		return block
 	}
-	if !p.expect(token.INDENT) {
+	if p.curTokenIs(token.INDENT) {
+		p.nextToken()
+	} else if p.peekTokenIs(token.INDENT) {
+		p.nextToken()
+		p.nextToken()
+	} else {
+		p.errors = append(p.errors,
+			fmt.Sprintf("line %d: expected INDENT, got %s (%s)",
+				p.curToken.Line, p.peekToken.Type, p.peekToken.Literal))
 		return block
 	}
-	p.nextToken()
 
 	for {
 		for p.curTokenIs(token.NEWLINE) {

@@ -1,1 +1,5 @@
-print("hi")
+def handle_request(req)
+    data = { "status": "success", "model": "Jash-AI" }
+    return data
+
+serve(8080, handle_request)

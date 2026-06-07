@@ -1,5 +1,7 @@
 package evaluator
 
+import "github.com/qwantuum/jash/pkg/ast"
+
 type Opcode byte
 
 const (
@@ -33,6 +35,7 @@ const (
 	OpNull
 	OpTrue
 	OpFalse
+	OpDefFunc
 )
 
 type Instruction struct {
@@ -40,4 +43,10 @@ type Instruction struct {
 	Arg   int
 	Arg2  int
 	Const interface{}
+}
+
+type funcDef struct {
+	Name   string
+	Params []*ast.Identifier
+	Body   *ast.BlockStatement
 }

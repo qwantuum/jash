@@ -206,6 +206,16 @@ func (vm *vm) Run() Object {
 
 		case OpFalse:
 			vm.push(FALSE)
+
+		case OpDefFunc:
+			fd := vm.constants[inst.Arg].(*funcDef)
+			fn := &Function{
+				Name:       fd.Name,
+				Parameters: fd.Params,
+				Body:       fd.Body,
+				Env:        vm.env,
+			}
+			vm.push(fn)
 		}
 	}
 	return nil

@@ -294,6 +294,20 @@ func Eval(node ast.Node, env *Environment) Object {
 }
 
 func evalProgram(program *ast.Program, env *Environment) Object {
+	if GlobalJIT != nil {
+		c := newCompiler()
+		instructions, constants, varNames, err := c.Compile(program)
+		if err == nil {
+			globals := make([]Object, len(instructions)+256)
+			vm := newVM(instructions, constants, varNames, globals, env)
+			result := vm.Run()
+			if result != nil {
+				return result
+			}
+			return NULL
+		}
+	}
+
 	var result Object
 	for _, stmt := range program.Statements {
 		result = Eval(stmt, env)

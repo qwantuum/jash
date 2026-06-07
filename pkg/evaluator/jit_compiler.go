@@ -29,6 +29,10 @@ func (c *compiler) Compile(node ast.Node) ([]Instruction, []interface{}, map[int
 	c.varCount = 0
 
 	switch n := node.(type) {
+	case *ast.Program:
+		for _, stmt := range n.Statements {
+			c.compileStatement(stmt)
+		}
 	case *ast.BlockStatement:
 		c.compileBlock(n)
 	default:
@@ -69,6 +73,13 @@ func (c *compiler) compileStatement(stmt ast.Statement) {
 	case *ast.WhileStatement:
 		c.compileWhile(s)
 	case *ast.FunctionStatement:
+		funcData := &funcDef{Name: s.Name.Value, Params: s.Parameters, Body: s.Body}
+		idx := c.addConstant(funcData)
+		c.emit(OpDefFunc, idx)
+		c.emit(OpStore, c.getVarIndex(s.Name.Value))
+		if GlobalJIT != nil {
+			GlobalJIT.Compile(s.Name.Value, s.Parameters, s.Body)
+		}
 	}
 }
 

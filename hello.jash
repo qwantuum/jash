@@ -1,6 +1,24 @@
-win = jash_ui.window("Hello Window")
-win.add_label("hello!")
-win.add_label("https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/300px-PNG_transparency_demonstration_1.png")
-win.add_photo("https://i.pinimg.com/736x/81/dd/02/81dd020d5ddfc3b5ea08e67e50a5d46e.jpg")
-win.add_label("Это очень длинный текст, который должен растянуть окно по ширине, чтобы было видно что ширина меняется динамически, но я в этом не уверен")
-win.run()
+# Используем правильный модуль jash_ui
+win = jash_ui.window("О проекте Jash")
+
+# Добавляем текстовый блок с описанием языка
+win.add_label("Jash — это экспериментальный ультралегковесный язык программирования на базе Go. Он совмещает Python-подобный синтаксис, автоматизацию уровня Bash и нативную работу с JSON.")
+
+# Добавляем разделитель для красоты
+win.add_label("--------------------------------------------------")
+
+# Добавляем интерактивное поле ввода
+win.add_entry("Ваш отзыв о Jash")
+
+# Функция-обработчик клика на кнопку
+def on_click(values)
+    print("Пользователь нажал кнопку!")
+    print("Текущие данные из UI:", values)
+
+# ВАЖНО: Сначала передаем функцию on_click, а вторым аргументом — текст кнопки
+win.add_button("Отправить отзыв на сервер", on_click)
+
+# Запускаем интерфейс
+result = win.run()
+
+print("Окно закрыто. Итоговый JSON:", result)

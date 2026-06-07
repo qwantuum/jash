@@ -132,7 +132,7 @@ func (vm *vm) Run() Object {
 		case OpCall:
 			fn := vm.pop()
 			args := make([]Object, inst.Arg)
-			for i := inst.Arg - 1; i >= 0; i-- {
+			for i := 0; i < inst.Arg; i++ {
 				args[i] = vm.pop()
 			}
 			result := applyFunction(fn, args)

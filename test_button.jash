@@ -1,5 +1,0 @@
-win = jash_ui.window("Test")
-def on_click(vals)
-    print("clicked!")
-win.add_button("Push me", on_click)
-win.run()

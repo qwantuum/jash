@@ -39,6 +39,7 @@
 | `FOR` | Ключевое слово `for` |
 | `IN` | Ключевое слово `in` |
 | `WHILE` | Ключевое слово `while` |
+| `REPEAT` | Ключевое слово `repeat` |
 | `TRUE` | Ключевое слово `true` |
 | `FALSE` | Ключевое слово `false` |
 | `NULL` | Ключевое слово `null` |
@@ -127,6 +128,7 @@
 | `IfStatement` | `Condition Expression`, `Body *BlockStatement`, `ElseBody *BlockStatement` | Условный оператор `if/elif/else` |
 | `ForStatement` | `Variable *Identifier`, `Iterable Expression`, `Body *BlockStatement` | Цикл `for x in iterable` |
 | `WhileStatement` | `Condition Expression`, `Body *BlockStatement` | Цикл `while condition` |
+| `RepeatStatement` | `Count Expression`, `Body *BlockStatement` | Цикл `repeat(n): block` |
 
 ### Выражения (Expression)
 
@@ -184,6 +186,7 @@
 | `(p *Parser) parseIfStatement()` | `if/elif/else` |
 | `(p *Parser) parseForStatement()` | `for var in iterable: block` |
 | `(p *Parser) parseWhileStatement()` | `while condition: block` |
+| `(p *Parser) parseRepeatStatement()` | `repeat(n): block` |
 | `(p *Parser) parseExpressionStatement()` | Выражение как инструкция |
 | `(p *Parser) parseBlockBody()` | Парсит тело с INDENT → DEDENT |
 | `(p *Parser) parseExpression(precedence) Expression` | Pratt-парсинг выражений |
@@ -255,6 +258,7 @@ type Object interface {
 | `evalIfStatement(node, env)` | Выполняет `if/elif/else` |
 | `evalForStatement(node, env)` | Итерирует по массиву, строке или объекту |
 | `evalWhileStatement(node, env)` | Выполняет цикл с условием |
+| `evalRepeatStatement(node, env)` | Выполняет цикл `repeat(n)` — повторяет блок n раз |
 | `evalIdentifier(node, env)` | Ищет идентификатор в окружении |
 | `evalNumberLiteral(node)` | Парсит число в Integer или Float |
 | `evalJSONObject(node, env)` | Вычисляет JSON-объект |
@@ -284,6 +288,7 @@ type Object interface {
 | `aiPredictFunc` | `ai.predict(text)` | Возвращает мок-результат: `prediction`, `confidence`, `model` |
 | `ollamaFunc` | `ai.ollama(url)` | Создаёт клиент для Ollama API |
 | `serveFunc` | `serve(port, handler)` | Запускает HTTP-сервер |
+| `imageASCIIFunc` | `image.ascii(path)` | Конвертирует изображение (файл или URL) в ASCII-арт и выводит в консоль |
 
 ### Вспомогательные функции HTTP-сервера
 
@@ -307,12 +312,120 @@ type Object interface {
 
 ---
 
+### Модуль `image`
+
+| Функция | Сигнатура Jash | Описание |
+|---|---|---|
+| `imageASCIIFunc` | `image.ascii(source)` | Читает изображение из файла или URL, конвертирует в ASCII-арт (80 символов в ширину) и возвращает строку с ASCII-графикой |
+
+---
+
+## pkg/evaluator/image.go — ASCII art (image)
+
+| Функция | Описание |
+|---|---|
+| `imageASCIIFunc` | Берёт локальный файл или URL, декодирует PNG/JPEG/GIF, ресайзит под 80 колонок, преобразует яркость пикселей в символы `@%#*+=-:. ` |
+
+### Константы
+
+| Константа | Значение | Описание |
+|---|---|---|
+| `asciiChars` | `"@%#*+=-:. "` | Набор символов для градаций яркости (от тёмного к светлому) |
+
+---
+
+## pkg/evaluator/jit.go — JIT-менеджер
+
+| Тип | Поля | Описание |
+|---|---|---|
+| `CompiledFunc` | `instructions []Instruction`, `constants []interface{}`, `varNames map[int]string` | Скомпилированная функция |
+| `JITManager` | `compiled map[string]*CompiledFunc` | Менеджер JIT-компиляции |
+
+| Функция/Метод | Описание |
+|---|---|
+| `InitJIT()` | Создаёт глобальный `GlobalJIT` |
+| `(jm *JITManager) IsCompiled(name string) bool` | Проверяет, скомпилирована ли функция |
+| `(jm *JITManager) Compile(name, params, body) bool` | Компилирует функцию в байткод |
+| `(jm *JITManager) Execute(name, args, env) Object` | Выполняет скомпилированную функцию |
+
+---
+
+## pkg/evaluator/jit_opcode.go — JIT opcodes
+
+| Константа | Код | Описание |
+|---|---|---|
+| `OpConstant` | 0 | Загрузить константу |
+| `OpLoad` | 1 | Загрузить переменную |
+| `OpStore` | 2 | Сохранить в переменную |
+| `OpAdd` / `OpSub` / `OpMul` / `OpDiv` | 3–6 | Арифметика |
+| `OpEq` / `OpNeq` / `OpLt` / `OpGt` / `OpLte` / `OpGte` | 7–12 | Сравнение |
+| `OpAnd` / `OpOr` / `OpNot` | 13–15 | Логические операции |
+| `OpMinus` | 16 | Унарный минус |
+| `OpCall` | 17 | Вызов функции |
+| `OpReturn` / `OpReturnVal` | 18–19 | Возврат |
+| `OpJump` / `OpJumpIfFalse` | 20–21 | Переходы |
+| `OpPop` | 22 | Вытолкнуть со стека |
+| `OpNewArray` / `OpNewObject` | 23–24 | Создать массив/объект |
+| `OpSetMember` / `OpGetMember` | 25–26 | Доступ к элементу |
+| `OpNull` / `OpTrue` / `OpFalse` | 27–29 | Литералы |
+| `OpDefFunc` | 30 | Объявление функции |
+
+| Тип | Поля | Описание |
+|---|---|---|
+| `Instruction` | `Op Opcode`, `Arg int`, `Arg2 int`, `Const interface{}` | Инструкция JIT |
+| `funcDef` | `Name string`, `Params []*ast.Identifier`, `Body *ast.BlockStatement` | Определение функции для JIT |
+
+---
+
+## pkg/evaluator/jit_compiler.go — JIT-компилятор
+
+| Тип | Поля | Описание |
+|---|---|---|
+| `compiler` | `instructions []Instruction`, `constants []interface{}`, `varIndex map[string]int`, `varNames map[int]string`, `varCount int` | Компилятор JIT |
+
+| Функция/Метод | Описание |
+|---|---|
+| `newCompiler() *compiler` | Создаёт новый компилятор |
+| `(c *compiler) Compile(node) ([]Instruction, []interface{}, map[int]string, error)` | Компилирует AST в байткод |
+| `(c *compiler) compileBlock(block)` | Компилирует блок |
+| `(c *compiler) compileStatement(stmt)` | Компилирует инструкцию |
+| `(c *compiler) compileIf(stmt)` | Компилирует if/else |
+| `(c *compiler) compileFor(stmt)` | Компилирует for |
+| `(c *compiler) compileWhile(stmt)` | Компилирует while |
+| `(c *compiler) compileNode(node)` | Компилирует выражение |
+| `(c *compiler) emit(op, args...)` | Добавляет инструкцию |
+| `(c *compiler) addConstant(val) int` | Добавляет константу |
+| `(c *compiler) getVarIndex(name) int` | Получает/создаёт индекс переменной |
+| `(c *compiler) infixOp(op) Opcode` | Оператор → опкод |
+
+---
+
+## pkg/evaluator/jit_vm.go — JIT-виртуальная машина
+
+| Тип | Поля | Описание |
+|---|---|---|
+| `vm` | `instructions`, `constants`, `varNames`, `ip`, `stack`, `sp`, `globals`, `env` | Виртуальная машина |
+
+| Функция/Метод | Описание |
+|---|---|
+| `newVM(instructions, constants, varNames, globals, env) *vm` | Создаёт VM |
+| `(vm *vm) Run() Object` | Запускает выполнение байткода |
+| `(vm *vm) push(obj Object)` | Кладёт на стек |
+| `(vm *vm) pop() Object` | Снимает со стека |
+| `(vm *vm) toJashObject(v interface{}) Object` | Конвертирует `interface{}` → Jash Object |
+| `evalArith(op, l, r Object) Object` | Арифметика для VM |
+| `eq(a, b Object) bool` | Сравнение на равенство |
+| `cmp(a, b Object) int` | Сравнение (<0, 0, >0) |
+
+---
+
 ## pkg/evaluator/ui.go — GUI (jash_ui)
 
 | Функция | Сигнатура Jash | Описание |
 |---|---|---|
 | `uiWindowFunc` | `jash_ui.window(title, w, h)` | Создаёт окно, возвращает объект с методами управления |
-| `uiMakeAdder(winID, widgetType)` | `win.add_label(text)` | Добавляет label / entry / text-area |
+| `uiMakeAdder(winID, widgetType)` | `win.add_label(text)` / `add_entry(text)` / `add_text(text)` | Добавляет label / entry / text-area |
+| `uiMakePhoto(winID)` | `win.add_photo(src, w?, h?)` | Добавляет изображение (URL или файл) |
 | `uiMakeButton(winID)` | `win.add_button(text, fn)` | Добавляет кнопку с функцией-колбэком |
 | `uiMakeGetValue(winID)` | `win.get_value(widgetID)` | Получает текущее значение поля ввода |
 | `uiMakeRun(winID)` | `win.run()` | Открывает окно в браузере, блокирует до закрытия |
@@ -320,6 +433,7 @@ type Object interface {
 | `findAvailablePort() int` | — | Находит свободный TCP-порт |
 | `openBrowser(url string)` | — | Открывает URL в браузере (Windows/macOS/Linux) |
 | `generateUIHTML(win) string` | — | Генерирует HTML+CSS+JS для окна |
+| `isImageURL(s string) bool` | — | Проверяет, является ли строка URL изображения (по расширению) |
 | `esc(s string) string` | — | Экранирует HTML-спецсимволы |
 
 ### Типы GUI
@@ -330,6 +444,12 @@ type Object interface {
 | `UIWindowState` | `ID`, `Title`, `Width`, `Height`, `Widgets`, `Values`, `server`, `closeCh` | Состояние окна |
 
 ---
+
+## debug_lexer/main.go — отладка лексера
+
+| Функция | Описание |
+|---|---|
+| `main()` | Запускает лексер на тестовой строке `def foo()\\n    print("hi")` и выводит все токены в stderr |---
 
 ## jashtoexe/main.go — билдер Jash → .exe
 

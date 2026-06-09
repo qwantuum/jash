@@ -176,6 +176,22 @@ func (ws *WhileStatement) String() string {
 	return out.String()
 }
 
+type RepeatStatement struct {
+	Count Expression
+	Body  *BlockStatement
+}
+
+func (rs *RepeatStatement) statementNode()       {}
+func (rs *RepeatStatement) TokenLiteral() string { return "repeat" }
+func (rs *RepeatStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString("repeat(")
+	out.WriteString(rs.Count.String())
+	out.WriteString("):\n")
+	out.WriteString(rs.Body.String())
+	return out.String()
+}
+
 type Identifier struct {
 	Value string
 }

@@ -236,6 +236,13 @@ func (e *Environment) loadBuiltins() {
 		},
 	}
 	e.store["jash_ui"] = jashUIObj
+
+	imageObj := &JSONObject{
+		Pairs: map[string]Object{
+			"ascii": &Builtin{Name: "image.ascii", Fn: imageASCIIFunc},
+		},
+	}
+	e.store["image"] = imageObj
 }
 
 var (
@@ -264,6 +271,8 @@ func Eval(node ast.Node, env *Environment) Object {
 		return evalForStatement(n, env)
 	case *ast.WhileStatement:
 		return evalWhileStatement(n, env)
+	case *ast.RepeatStatement:
+		return evalRepeatStatement(n, env)
 	case *ast.Identifier:
 		return evalIdentifier(n, env)
 	case *ast.NumberLiteral:
@@ -448,6 +457,33 @@ func evalWhileStatement(node *ast.WhileStatement, env *Environment) Object {
 		if !isTruthy(condition) {
 			break
 		}
+		r := Eval(node.Body, env)
+		if r != nil {
+			if r.Type() == RETURN_OBJ {
+				return r
+			}
+			if isError(r) {
+				return r
+			}
+			result = r
+		}
+	}
+	return result
+}
+
+func evalRepeatStatement(node *ast.RepeatStatement, env *Environment) Object {
+	countObj := Eval(node.Count, env)
+	if isError(countObj) {
+		return countObj
+	}
+
+	count, ok := countObj.(*Integer)
+	if !ok {
+		return &Error{Message: fmt.Sprintf("repeat() requires an integer argument, got %s", countObj.Type())}
+	}
+
+	var result Object = NULL
+	for i := int64(0); i < count.Value; i++ {
 		r := Eval(node.Body, env)
 		if r != nil {
 			if r.Type() == RETURN_OBJ {

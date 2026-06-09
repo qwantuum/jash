@@ -20,6 +20,7 @@ const (
 	FOR    TokenType = "FOR"
 	IN     TokenType = "IN"
 	WHILE  TokenType = "WHILE"
+	REPEAT TokenType = "REPEAT"
 	TRUE   TokenType = "TRUE"
 	FALSE  TokenType = "FALSE"
 	NULL   TokenType = "NULL"
@@ -66,6 +67,7 @@ var Keywords = map[string]TokenType{
 	"for":    FOR,
 	"in":     IN,
 	"while":  WHILE,
+	"repeat": REPEAT,
 	"true":   TRUE,
 	"false":  FALSE,
 	"null":   NULL,

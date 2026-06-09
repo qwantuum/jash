@@ -158,6 +158,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseForStatement()
 	case token.WHILE:
 		return p.parseWhileStatement()
+	case token.REPEAT:
+		return p.parseRepeatStatement()
 	case token.IDENT:
 		if p.peekToken.Type == token.ASSIGN {
 			return p.parseAssignStatement()
@@ -292,6 +294,28 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 		p.nextToken()
 	}
 
+	return stmt
+}
+
+func (p *Parser) parseRepeatStatement() *ast.RepeatStatement {
+	stmt := &ast.RepeatStatement{}
+	p.nextToken()
+
+	if p.curToken.Type != token.LPAREN {
+		p.errors = append(p.errors,
+			fmt.Sprintf("line %d: expected '(' after repeat", p.curToken.Line))
+		return nil
+	}
+	p.nextToken()
+
+	stmt.Count = p.parseExpression(LOWEST)
+
+	if !p.expect(token.RPAREN) {
+		return nil
+	}
+
+	stmt.Body = p.parseBlockBody()
+	p.nextToken()
 	return stmt
 }
 

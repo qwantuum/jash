@@ -12,6 +12,7 @@ type compiler struct {
 	varIndex     map[string]int
 	varNames     map[int]string
 	varCount     int
+	failed       bool
 }
 
 func newCompiler() *compiler {
@@ -27,16 +28,24 @@ func (c *compiler) Compile(node ast.Node) ([]Instruction, []interface{}, map[int
 	c.varIndex = make(map[string]int)
 	c.varNames = make(map[int]string)
 	c.varCount = 0
+	c.failed = false
 
 	switch n := node.(type) {
 	case *ast.Program:
 		for _, stmt := range n.Statements {
+			if c.failed {
+				break
+			}
 			c.compileStatement(stmt)
 		}
 	case *ast.BlockStatement:
 		c.compileBlock(n)
 	default:
 		c.compileNode(node)
+	}
+
+	if c.failed {
+		return nil, nil, nil, fmt.Errorf("JIT compilation failed")
 	}
 
 	c.emit(OpReturn)
@@ -46,6 +55,9 @@ func (c *compiler) Compile(node ast.Node) ([]Instruction, []interface{}, map[int
 
 func (c *compiler) compileBlock(block *ast.BlockStatement) {
 	for _, stmt := range block.Statements {
+		if c.failed {
+			break
+		}
 		c.compileStatement(stmt)
 	}
 }
@@ -80,6 +92,8 @@ func (c *compiler) compileStatement(stmt ast.Statement) {
 		if GlobalJIT != nil {
 			GlobalJIT.Compile(s.Name.Value, s.Parameters, s.Body)
 		}
+	default:
+		c.failed = true
 	}
 }
 

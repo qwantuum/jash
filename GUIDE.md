@@ -26,7 +26,31 @@ def greet(name)
 
 ---
 
-## 🔢 2. Advanced Mathematical Engine (PyPy3-style)
+## 🔢 2. Loops: `while`, `for`, `repeat`
+
+**`while`** — repeats while condition is truthy:
+```jash
+x = 3
+while x > 0
+    print(x)
+    x = x - 1
+```
+
+**`for ... in`** — iterates over an array, string, or object:
+```jash
+for i in [1, 2, 3]
+    print(i)
+```
+
+**`repeat(n)`** — repeats a block exactly `n` times:
+```jash
+repeat(5)
+    print("Hello!")
+```
+
+---
+
+## 🔢 3. Advanced Mathematical Engine (PyPy3-style)
 
 Jash supports basic infix operations (`+`, `-`, `*`, `/`) with standard mathematical operator precedence (multiplication and division happen before addition and subtraction).
 
@@ -62,36 +86,82 @@ my_data = {
 
 Jash is an **AI-native language**, meaning AI interaction capability is baked right into the core global runtime.
 
-### `ai.set_key(key?)`
-Initializes security credentials for the model. 
-* If a string is passed: `ai.set_key("sk-...")` uses that explicit key.
-* If left empty: `ai.set_key()` programmatically inspects Go's `os.Getenv("OPENAI_API_KEY")` to securely fetch it from your Windows system environment. If empty, it drops a clean `[Jash Error]: API key not found` warning.
-
-### `ai.predict(prompt)`
-Sends a raw text prompt directly to the built-in AI interface and returns a clean execution-ready string payload.
+### `ai.predict(text)`
+Sends a text to the built-in mock AI interface and returns a structured result with `prediction`, `confidence`, and `model` fields.
 ```jash
-ai.set_key()
-slogan = ai.predict("Give me a slogan for Jash language")
-print(slogan)
+result = ai.predict("Great product!")
+print(result.prediction)  # "positive"
+print(result.confidence)  # 0.9532
+```
+
+### `ai.ollama(url)`
+Creates an Ollama client connected to a local or remote Ollama instance:
+```jash
+client = ai.ollama("http://localhost:11434")
+result = client.generate("llama2", "Hello!")
+print(result.response)
 ```
 
 ---
 
-## 🌐 5. Web Backend Engine (`http`)
+## 🌐 5. Web Backend (`serve`)
 
-Jash exposes underlying high-performance native Go network routines (`net/http`) through ultra-simplified bindings.
-
-### `http.json(status, object)`
-A high-level utility function that serializes a Jash/Python native object into a minified, valid JSON string and applies the standard `application/json` Content-Type header header automatically.
-
-### `http.listen(port, handler_function)`
-Spins up a multi-threaded, persistent HTTP production-ready backend web server running locally on the specified port.
+Jash exposes Go's `net/http` through a simple `serve(port, handler)` function:
 
 ```jash
-def api_handler()
-    payload = { "framework": "Jash-Core", "status": "online" }
-    return http.json(200, payload)
+def handler(req)
+    return {
+        "status": "ok",
+        "method": req.method,
+        "path": req.path,
+        "message": "Hello from Jash!"
+    }
 
-# Starts server on http://localhost:8080
-http.listen(8080, api_handler)
+serve(3000, handler)
 ```
+
+The handler receives an object with `method`, `path`, `body`, and `query` fields. The return value is serialized to JSON automatically.
+
+---
+
+## 🖼️ 6. ASCII Art from Images (`image`)
+
+Convert any image (local file or URL) to ASCII art in the console:
+
+```jash
+art = image.ascii("logo.png")
+print(art)
+
+art = image.ascii("https://example.com/photo.jpg")
+print(art)
+```
+
+Uses PNG/JPEG/GIF decoding, resizes to 80 columns, and maps brightness to `@%#*+=-:. ` characters.
+
+---
+
+## 🪟 7. GUI Windows (`jash_ui`)
+
+Create browser-based GUI windows with the `jash_ui` module:
+
+```jash
+def on_click(vals)
+    print("Button clicked!")
+
+win = jash_ui.window("My App", 500, 400)
+win.add_label("Welcome to Jash!")
+win.add_button("Click me", on_click)
+win.add_entry("Enter your name")
+win.add_photo("logo.png")
+win.run()
+```
+
+Methods available on the window object:
+- `add_label(text)` — static text
+- `add_button(text, callback)` — clickable button
+- `add_entry(text)` — single-line input (returns widget ID)
+- `add_text(text)` — multi-line text area (returns widget ID)
+- `add_photo(src, width?, height?)` — image from file or URL
+- `get_value(widgetID)` — get current value of an entry or text-area
+- `run()` — open the window in a browser and block until closed
+- `close()` — close the window programmatically

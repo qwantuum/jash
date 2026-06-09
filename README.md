@@ -24,10 +24,14 @@ serve(8080, handle_request)
 - **Python-like syntax** — Whitespace-sensitive indentation, no semicolons, no curly braces for blocks
 - **Native JSON literals** — Write `{ "key": value }` and `[1, 2, 3]` directly in code
 - **Built-in HTTP server** — `serve(port, handler)` starts a production-ready HTTP server
+- **GUI windows** — `jash_ui.window(title, w, h)` creates browser-based windows with labels, buttons, inputs, and photos
+- **ASCII art from images** — `image.ascii(path)` converts any image (file or URL) to console ASCII art
 - **Mock AI predictions** — `ai.predict(input)` returns structured prediction results
+- **Ollama integration** — `ai.ollama(url)` connects to local or remote LLM instances
+- **JIT compilation** — Hot-path functions are JIT-compiled to bytecode for faster execution
 - **Type inference** — Integers, floats, strings, booleans, null, JSON objects, and arrays
 - **Expressions & operators** — Full arithmetic, comparison, and logical operators
-- **Control flow** — `if/else`, `for`, `while` with indentation-based blocks
+- **Control flow** — `if/else`, `for`, `while`, `repeat(n)` with indentation-based blocks
 - **Functions** — Define reusable logic with `def name(params):`
 - **Zero external dependencies** — Built entirely on the Go standard library
 
@@ -113,6 +117,9 @@ for i in [1, 2, 3]
 while x > 0
     print(x)
     x = x - 1
+
+repeat(3)
+    print("this runs 3 times")
 ```
 
 ### HTTP Server
@@ -143,6 +150,36 @@ def analyze(text)
 
 data = analyze("Great product!")
 print(data)
+```
+
+### GUI Windows
+
+Create browser-based windows with labels, buttons, text inputs and photos:
+
+```jash
+def on_click(vals)
+    print("Button clicked!")
+
+win = jash_ui.window("My App", 500, 400)
+win.add_label("Hello, Jash!")
+win.add_button("Click me", on_click)
+win.add_entry("Enter name")
+win.add_photo("logo.png")
+win.run()
+```
+
+### ASCII Art from Images
+
+Turn any image into console ASCII art:
+
+```jash
+# From a local file
+art = image.ascii("logo.png")
+print(art)
+
+# From a URL
+art = image.ascii("https://example.com/photo.jpg")
+print(art)
 ```
 
 ### Ollama Integration
@@ -178,6 +215,8 @@ print(models)
 | `serve()`  | Starts an HTTP server on a given port    |
 | `ai.predict()` | Returns a mock AI prediction result  |
 | `ai.ollama()` | Creates an Ollama client for LLM inference |
+| `image.ascii()` | Converts an image (file path or URL) to ASCII art and returns it |
+| `jash_ui.window()` | Creates a GUI window with labels, buttons, entries, text-areas and photos |
 
 ---
 
@@ -242,13 +281,22 @@ The binary requires no dependencies beyond the Go standard library.
 jash/
   go.mod
   README.md
-  cmd/jash/main.go          # Entry point
+  builderexe.py              # Build & deploy script
+  cmd/jash/main.go           # Entry point
+  debug_lexer/main.go        # Standalone lexer debug tool
   pkg/
-    token/token.go           # Token definitions
-    lexer/lexer.go           # Lexer with indentation tracking
-    ast/ast.go               # Abstract Syntax Tree nodes
-    parser/parser.go         # Pratt parser
-    evaluator/evaluator.go   # Tree-walking interpreter
+    token/token.go            # Token definitions
+    lexer/lexer.go            # Lexer with indentation tracking
+    ast/ast.go                # Abstract Syntax Tree nodes
+    parser/parser.go          # Pratt parser
+    evaluator/
+      evaluator.go            # Tree-walking interpreter + builtins
+      image.go                # image.ascii() — ASCII art from images
+      ui.go                   # jash_ui.window() — GUI windows
+      jit.go                  # JIT manager
+      jit_opcode.go           # JIT opcodes
+      jit_compiler.go         # JIT compiler
+      jit_vm.go               # JIT virtual machine
 ```
 
 ---

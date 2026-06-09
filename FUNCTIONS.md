@@ -289,6 +289,7 @@ type Object interface {
 | `ollamaFunc` | `ai.ollama(url)` | Создаёт клиент для Ollama API |
 | `serveFunc` | `serve(port, handler)` | Запускает HTTP-сервер |
 | `imageASCIIFunc` | `image.ascii(path)` | Конвертирует изображение (файл или URL) в ASCII-арт и выводит в консоль |
+| `timeSleepFunc` | `time.sleep(secs)` | Приостанавливает выполнение на указанное количество секунд |
 
 ### Вспомогательные функции HTTP-сервера
 
@@ -312,11 +313,27 @@ type Object interface {
 
 ---
 
+### Модуль `time`
+
+| Функция | Сигнатура Jash | Описание |
+|---|---|---|
+| `timeSleepFunc` | `time.sleep(seconds)` | Приостанавливает выполнение на `seconds` (int или float). Пример: `time.sleep(1.5)` |
+
+---
+
 ### Модуль `image`
 
 | Функция | Сигнатура Jash | Описание |
 |---|---|---|
 | `imageASCIIFunc` | `image.ascii(source)` | Читает изображение из файла или URL, конвертирует в ASCII-арт (80 символов в ширину) и возвращает строку с ASCII-графикой |
+
+---
+
+## pkg/evaluator/evaluator.go — time.sleep
+
+| Функция | Описание |
+|---|---|
+| `timeSleepFunc` | `time.sleep(secs)` — приостанавливает выполнение, принимает Integer, Float или String (парсится в число) |
 
 ---
 

@@ -182,6 +182,16 @@ art = image.ascii("https://example.com/photo.jpg")
 print(art)
 ```
 
+### Sleep / Delay
+
+Pause execution with `time.sleep(seconds)`:
+
+```jash
+print("waiting...")
+time.sleep(1.5)
+print("done waiting")
+```
+
 ### Ollama Integration
 
 Connect to a local or remote [Ollama](https://ollama.ai) instance for LLM inference:
@@ -217,6 +227,7 @@ print(models)
 | `ai.ollama()` | Creates an Ollama client for LLM inference |
 | `image.ascii()` | Converts an image (file path or URL) to ASCII art and returns it |
 | `jash_ui.window()` | Creates a GUI window with labels, buttons, entries, text-areas and photos |
+| `time.sleep()` | Pauses execution for the given number of seconds (integer or float) |
 
 ---
 

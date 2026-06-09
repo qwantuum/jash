@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/qwantuum/jash/pkg/ast"
 )
@@ -243,6 +244,13 @@ func (e *Environment) loadBuiltins() {
 		},
 	}
 	e.store["image"] = imageObj
+
+	timeObj := &JSONObject{
+		Pairs: map[string]Object{
+			"sleep": &Builtin{Name: "time.sleep", Fn: timeSleepFunc},
+		},
+	}
+	e.store["time"] = timeObj
 }
 
 var (
@@ -862,6 +870,35 @@ func typeFunc(args ...Object) Object {
 		return &Error{Message: "type() requires exactly 1 argument"}
 	}
 	return &String{Value: string(args[0].Type())}
+}
+
+func timeSleepFunc(args ...Object) Object {
+	if len(args) != 1 {
+		return &Error{Message: "time.sleep() requires exactly 1 argument: seconds"}
+	}
+
+	var secs float64
+	switch o := args[0].(type) {
+	case *Integer:
+		secs = float64(o.Value)
+	case *Float:
+		secs = o.Value
+	case *String:
+		f, err := strconv.ParseFloat(o.Value, 64)
+		if err != nil {
+			return &Error{Message: fmt.Sprintf("time.sleep() cannot parse '%s' as a number", o.Value)}
+		}
+		secs = f
+	default:
+		return &Error{Message: "time.sleep() argument must be a number (seconds)"}
+	}
+
+	if secs < 0 {
+		return &Error{Message: "time.sleep() argument must be non-negative"}
+	}
+
+	time.Sleep(time.Duration(secs * 1e9))
+	return NULL
 }
 
 func aiPredictFunc(args ...Object) Object {

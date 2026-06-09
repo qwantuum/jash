@@ -39,7 +39,7 @@ serve(8080, handle_request)
 
 ## Quick Start
 
-При первом запуске возможна задержка из-за проверки Windows Defender / SmartScreen. Это нормально для неподписанных Go-бинарников
+~~При первом запуске возможна задержка из-за проверки Windows Defender / SmartScreen. Это нормально для неподписанных Go-бинарников~~
 
 ### Installation
 

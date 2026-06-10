@@ -1,0 +1,131 @@
+name: Build and Stable Release Jash v1.0
+
+on:
+  workflow_dispatch: # Добавляет серую кнопку запуска на сайт GitHub Actions
+  push:
+    tags:
+      - "v*" # Автоматический запуск при пуше тегов вроде v1.0, v2.1.3
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Compile Jash Packages
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Если один пакет упадет, остальные все равно дособираются
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            release_name: jash-windows-amd64.exe
+            pack_type: binary
+
+          - goos: linux
+            goarch: amd64
+            release_name: jash-ubuntu-amd64.deb
+            pack_type: deb
+
+          - goos: darwin
+            goarch: arm64
+            release_name: jash-macos-arm64.zip
+            pack_type: zip
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      # --- ЭТАП 1: СБОРКА СЫРОГО БИНАРНИКА ---
+      - name: Build Raw Binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go build -o jash_raw ./cmd/jash
+
+      # --- ЭТАП 2: СБОРКА WINDOWS (.exe) ---
+      - name: Package Windows
+        if: matrix.pack_type == 'binary'
+        run: |
+          mv jash_raw ${{ matrix.release_name }}
+
+      # --- ЭТАП 3: СБОРКА UBUNTU (.deb) ---
+      - name: Package Ubuntu DEB
+        if: matrix.pack_type == 'deb'
+        run: |
+          # Создаем структуру директорий для deb пакета
+          mkdir -p jash-deb/usr/local/bin
+          mkdir -p jash-deb/DEBIAN
+          
+          # Копируем бинарник в папку установки
+          cp jash_raw jash-deb/usr/local/bin/jash
+          chmod +x jash-deb/usr/local/bin/jash
+          
+          # Безопасное получение версии: если это тег, убираем 'v'. Если ветка, ставим 1.0.0
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=$(echo "${{ github.ref_name }}" | sed 's/v//g')
+          else
+            VERSION="1.0.0"
+          fi
+          
+          cat <<EOF > jash-deb/DEBIAN/control
+          Package: jash
+          Version: ${VERSION}
+          Section: devel
+          Priority: optional
+          Architecture: amd64
+          Maintainer: qwantuum
+          Description: A lightweight, productive, AI-native scripting language.
+          EOF
+          
+          # Собираем .deb пакет
+          dpkg-deb --build jash-deb ${{ matrix.release_name }}
+
+      # --- ЭТАП 4: СБОРКА MACOS (.zip) ---
+      - name: Package macOS ZIP
+        if: matrix.pack_type == 'zip'
+        run: |
+          mkdir -p macos_root
+          cp jash_raw macos_root/jash
+          chmod +x macos_root/jash
+          zip -r ${{ matrix.release_name }} macos_root
+
+      # --- ЭТАП 5: ЗАГРУЗКА АРТИФАКТОВ ---
+      - name: Upload Artifacts Temporarily
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.pack_type }}
+          path: ${{ matrix.release_name }}
+
+  release:
+    name: Create GitHub Stable Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all built packages
+        uses: actions/download-artifact@v4
+        with:
+          path: binaries
+          merge-multiple: true
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: binaries/*
+          name: Jash Language Official ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

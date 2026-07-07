@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -253,6 +254,14 @@ func (e *Environment) loadBuiltins() {
 		},
 	}
 	e.store["image"] = imageObj
+
+	fileObj := &JSONObject{
+		Pairs: map[string]Object{
+			"read":  &Builtin{Name: "file.read", Fn: fileReadFunc},
+			"write": &Builtin{Name: "file.write", Fn: fileWriteFunc},
+		},
+	}
+	e.store["file"] = fileObj
 
 	timeObj := &JSONObject{
 		Pairs: map[string]Object{
@@ -949,6 +958,40 @@ func printYellowFunc(args ...Object) Object {
 	fmt.Print(strings.Join(parts, " "))
 	fmt.Println("\033[0m")
 	return NULL
+}
+
+func fileReadFunc(args ...Object) Object {
+	if len(args) != 1 {
+		return &Error{Message: "file.read() needs 1 argument (path)"}
+	}
+	path, ok := args[0].(*String)
+	if !ok {
+		return &Error{Message: "file.read() path must be a string"}
+	}
+	data, err := os.ReadFile(path.Value)
+	if err != nil {
+		return &Error{Message: err.Error()}
+	}
+	return &String{Value: string(data)}
+}
+
+func fileWriteFunc(args ...Object) Object {
+	if len(args) != 2 {
+		return &Error{Message: "file.write() needs 2 arguments (path, text)"}
+	}
+	path, ok := args[0].(*String)
+	if !ok {
+		return &Error{Message: "file.write() path must be a string"}
+	}
+	text, ok := args[1].(*String)
+	if !ok {
+		return &Error{Message: "file.write() text must be a string"}
+	}
+	err := os.WriteFile(path.Value, []byte(text.Value), 0644)
+	if err != nil {
+		return &Error{Message: err.Error()}
+	}
+	return TRUE
 }
 
 func timeStartFunc(args ...Object) Object {

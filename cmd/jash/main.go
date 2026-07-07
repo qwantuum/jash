@@ -1,32 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/qwantuum/jash/pkg/evaluator"
 	"github.com/qwantuum/jash/pkg/lexer"
 	"github.com/qwantuum/jash/pkg/parser"
 )
 
-func main() {
-	args := os.Args[1:]
-
-	stacktrace := false
-	filename := ""
-	for _, a := range args {
-		if a == "--stacktrace" {
-			stacktrace = true
-		} else if filename == "" {
-			filename = a
-		}
-	}
-
-	if filename == "" {
-		fmt.Println("Usage: jash [--stacktrace] <file.jash>")
-		os.Exit(1)
-	}
-
+func runFile(filename string, stacktrace bool) {
 	evaluator.StacktraceEnabled = stacktrace
 	evaluator.InitJIT()
 
@@ -72,4 +57,77 @@ func main() {
 			}
 		}
 	}
+}
+
+func runREPL() {
+	evaluator.InitJIT()
+	env := evaluator.NewEnvironment()
+	scanner := bufio.NewScanner(os.Stdin)
+
+	fmt.Println("Jash REPL")
+
+	for {
+		fmt.Print("\n> ")
+
+		if !scanner.Scan() {
+			break
+		}
+
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		if line == "exit" {
+			break
+		}
+
+		l := lexer.New(line)
+		tokens, errs := l.Tokenize()
+		if len(errs) > 0 {
+			for _, e := range errs {
+				fmt.Fprintln(os.Stderr, e)
+			}
+			continue
+		}
+
+		p := parser.New(tokens)
+		program := p.ParseProgram()
+		if len(p.Errors()) > 0 {
+			for _, e := range p.Errors() {
+				fmt.Fprintln(os.Stderr, e)
+			}
+			continue
+		}
+
+		result := evaluator.Eval(program, env)
+		if result != nil && result.Type() != evaluator.NULL_OBJ && result.Type() != evaluator.RETURN_OBJ {
+			switch r := result.(type) {
+			case *evaluator.Error:
+				fmt.Fprintf(os.Stderr, "Error: %s\n", r.Message)
+			default:
+				fmt.Println(result.Inspect())
+			}
+		}
+	}
+}
+
+func main() {
+	args := os.Args[1:]
+
+	stacktrace := false
+	filename := ""
+	for _, a := range args {
+		if a == "--stacktrace" {
+			stacktrace = true
+		} else if filename == "" {
+			filename = a
+		}
+	}
+
+	if filename == "" {
+		runREPL()
+		return
+	}
+
+	runFile(filename, stacktrace)
 }

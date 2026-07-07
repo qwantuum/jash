@@ -194,6 +194,16 @@ func (vm *vm) Run() Object {
 				} else {
 					return &Error{Message: fmt.Sprintf("JIT: array has no member: %s", key)}
 				}
+			case *Builtin:
+				if o.subMembers != nil {
+					if member, ok := o.subMembers[key]; ok {
+						vm.push(member)
+					} else {
+						return &Error{Message: fmt.Sprintf("JIT: builtin '%s' has no member '%s'", o.Name, key)}
+					}
+				} else {
+					return &Error{Message: fmt.Sprintf("JIT: builtin '%s' has no members", o.Name)}
+				}
 			default:
 				return &Error{Message: fmt.Sprintf("JIT: cannot access member on %T", o)}
 			}

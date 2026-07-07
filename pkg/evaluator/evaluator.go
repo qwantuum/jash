@@ -16,6 +16,8 @@ import (
 
 var StacktraceEnabled bool
 var callStack []string
+var timerStart time.Time
+var timerStarted bool
 
 func PushCallStack(name string) {
 	if StacktraceEnabled {
@@ -162,8 +164,9 @@ func (f *Function) Inspect() string {
 }
 
 type Builtin struct {
-	Name string
-	Fn   func(args ...Object) Object
+	Name       string
+	Fn         func(args ...Object) Object
+	subMembers map[string]Object
 }
 
 func (b *Builtin) Type() ObjectType { return BUILTIN_OBJ }
@@ -218,7 +221,13 @@ func (e *Environment) Set(name string, val Object) Object {
 }
 
 func (e *Environment) loadBuiltins() {
-	e.store["print"] = &Builtin{Name: "print", Fn: printFunc}
+	printBuiltin := &Builtin{Name: "print", Fn: printFunc}
+	printBuiltin.subMembers = map[string]Object{
+		"green":  &Builtin{Name: "print.green", Fn: printGreenFunc},
+		"red":    &Builtin{Name: "print.red", Fn: printRedFunc},
+		"yellow": &Builtin{Name: "print.yellow", Fn: printYellowFunc},
+	}
+	e.store["print"] = printBuiltin
 	e.store["len"] = &Builtin{Name: "len", Fn: lenFunc}
 	e.store["serve"] = &Builtin{Name: "serve", Fn: serveFunc}
 	e.store["type"] = &Builtin{Name: "type", Fn: typeFunc}
@@ -248,6 +257,8 @@ func (e *Environment) loadBuiltins() {
 	timeObj := &JSONObject{
 		Pairs: map[string]Object{
 			"sleep": &Builtin{Name: "time.sleep", Fn: timeSleepFunc},
+			"start": &Builtin{Name: "time.start", Fn: timeStartFunc},
+			"stop":  &Builtin{Name: "time.stop", Fn: timeStopFunc},
 		},
 	}
 	e.store["time"] = timeObj
@@ -592,6 +603,12 @@ func evalMemberAccess(node *ast.MemberAccess, env *Environment) Object {
 		}
 		return val
 	case *Builtin:
+		if o.subMembers != nil {
+			if member, ok := o.subMembers[node.Member.Value]; ok {
+				return member
+			}
+			return &Error{Message: fmt.Sprintf("builtin '%s' has no member '%s'", o.Name, node.Member.Value)}
+		}
 		return obj
 	case *JSONArray:
 		if node.Member.Value == "length" {
@@ -899,6 +916,54 @@ func timeSleepFunc(args ...Object) Object {
 
 	time.Sleep(time.Duration(secs * 1e9))
 	return NULL
+}
+
+func printGreenFunc(args ...Object) Object {
+	parts := make([]string, len(args))
+	for i, arg := range args {
+		parts[i] = arg.Inspect()
+	}
+	fmt.Print("\033[32m")
+	fmt.Print(strings.Join(parts, " "))
+	fmt.Println("\033[0m")
+	return NULL
+}
+
+func printRedFunc(args ...Object) Object {
+	parts := make([]string, len(args))
+	for i, arg := range args {
+		parts[i] = arg.Inspect()
+	}
+	fmt.Print("\033[31m")
+	fmt.Print(strings.Join(parts, " "))
+	fmt.Println("\033[0m")
+	return NULL
+}
+
+func printYellowFunc(args ...Object) Object {
+	parts := make([]string, len(args))
+	for i, arg := range args {
+		parts[i] = arg.Inspect()
+	}
+	fmt.Print("\033[33m")
+	fmt.Print(strings.Join(parts, " "))
+	fmt.Println("\033[0m")
+	return NULL
+}
+
+func timeStartFunc(args ...Object) Object {
+	timerStart = time.Now()
+	timerStarted = true
+	return NULL
+}
+
+func timeStopFunc(args ...Object) Object {
+	if !timerStarted {
+		return &Error{Message: "time.stop() called without time.start()"}
+	}
+	elapsed := time.Since(timerStart)
+	timerStarted = false
+	return &Float{Value: float64(elapsed.Microseconds())}
 }
 
 func aiPredictFunc(args ...Object) Object {

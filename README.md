@@ -4,6 +4,11 @@
   <img src="assets/logo.png" alt="Jash Logo" width="250">
 </p>
 
+## 🕵️‍♂️ Fun Fact & Trivia
+
+Originally, the name **Jash** stood for **JSON + Hash**. However, when the AI was helping to write the first version of this README, it hallucinated and assumed **Jash** meant **JSON + Bash/Python** because of the `sh` at the end. 
+
+The idea sounded so cool that the creator decided to keep the AI's version and actually implemented the system automation features. So yes, this language was partially co-authored by an AI's mistake!
 
 **JSON + Bash/Python** — A clean, indentation-based scripting language with first-class JSON support, built-in HTTP serving, and mock AI predictions.
 

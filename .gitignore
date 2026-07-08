@@ -1,4 +1,4 @@
-напоминалка.txt
-.gitignore
-RU.md
-debbuging.jash
+/напоминалка.txt
+/.gitignore
+/RU.md
+/debbuging.jash

@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/rand"
 	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -232,6 +235,8 @@ func (e *Environment) loadBuiltins() {
 	e.store["len"] = &Builtin{Name: "len", Fn: lenFunc}
 	e.store["serve"] = &Builtin{Name: "serve", Fn: serveFunc}
 	e.store["type"] = &Builtin{Name: "type", Fn: typeFunc}
+	e.store["say"] = &Builtin{Name: "say", Fn: sayFunc}
+	e.store["any"] = &Builtin{Name: "any", Fn: anyFunc}
 
 	aiObj := &JSONObject{
 		Pairs: map[string]Object{
@@ -864,6 +869,51 @@ func isError(obj Object) bool {
 		return obj.Type() == ERROR_OBJ
 	}
 	return false
+}
+
+func sayFunc(args ...Object) Object {
+	if len(args) != 1 {
+		return &Error{Message: "say() requires exactly 1 argument: text"}
+	}
+	text, ok := args[0].(*String)
+	if !ok {
+		return &Error{Message: "say() argument must be a string"}
+	}
+	go func() {
+		var cmd *exec.Cmd
+		switch runtime.GOOS {
+		case "darwin":
+			cmd = exec.Command("say", text.Value)
+		case "windows":
+			psCmd := fmt.Sprintf("Add-Type -AssemblyName System.speech; $speak = New-Object System.Speech.Synthesis.SpeechSynthesizer; $speak.Speak('%s')", text.Value)
+			cmd = exec.Command("powershell", "-Command", psCmd)
+		default:
+			cmd = exec.Command("espeak", text.Value)
+		}
+		cmd.Start()
+	}()
+	return NULL
+}
+
+func anyFunc(args ...Object) Object {
+	if len(args) != 1 {
+		return &Error{Message: "any() requires exactly 1 argument"}
+	}
+	switch o := args[0].(type) {
+	case *JSONArray:
+		if len(o.Elements) == 0 {
+			return NULL
+		}
+		return o.Elements[rand.Intn(len(o.Elements))]
+	case *String:
+		runes := []rune(o.Value)
+		if len(runes) == 0 {
+			return &String{Value: ""}
+		}
+		return &String{Value: string(runes[rand.Intn(len(runes))])}
+	default:
+		return &Error{Message: fmt.Sprintf("any() not supported for %s", args[0].Type())}
+	}
 }
 
 func printFunc(args ...Object) Object {

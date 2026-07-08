@@ -1,0 +1,5 @@
+name = "Jash"
+path_suffixes = ["jash"]
+line_comments = ["# "]
+tab_size = 4
+hard_tabs = false

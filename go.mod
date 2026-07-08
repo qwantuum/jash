@@ -1,3 +1,3 @@
 module github.com/qwantuum/jash
 
-go 1.21
+go 1.26.4

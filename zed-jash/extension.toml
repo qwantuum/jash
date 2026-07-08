@@ -1,0 +1,8 @@
+[extension]
+id = "zed-jash"
+name = "Jash Support"
+version = "0.1.0"
+schema_version = 1
+authors = ["qwantuum"]
+description = "Zed extension for the Jash programming language"
+repository = "https://github.com/qwantuum/jash"

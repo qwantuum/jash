@@ -1,0 +1,4 @@
+import ai
+
+result = ai.predict("What is 2+2?")
+print("AI says:", result)

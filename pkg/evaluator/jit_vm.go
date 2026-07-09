@@ -74,6 +74,11 @@ func (vm *vm) Run() Object {
 			l := vm.pop()
 			vm.push(evalArith("/", l, r))
 
+		case OpMod:
+			r := vm.pop()
+			l := vm.pop()
+			vm.push(evalArith("%", l, r))
+
 		case OpEq:
 			r := vm.pop()
 			l := vm.pop()
@@ -280,6 +285,11 @@ func evalArith(op string, l, r Object) Object {
 				return &Error{Message: "division by zero"}
 			}
 			return &Integer{Value: li.Value / ri.Value}
+		case "%":
+			if ri.Value == 0 {
+				return &Error{Message: "division by zero"}
+			}
+			return &Integer{Value: li.Value % ri.Value}
 		}
 	}
 

@@ -28,6 +28,8 @@ const (
 	OR     TokenType = "OR"
 	NOT    TokenType = "NOT"
 	IMPORT TokenType = "IMPORT"
+	BREAK   TokenType = "BREAK"
+	CONTINUE TokenType = "CONTINUE"
 
 	LBRACE   TokenType = "LBRACE"
 	RBRACE   TokenType = "RBRACE"
@@ -50,6 +52,12 @@ const (
 	GT     TokenType = "GT"
 	LTE    TokenType = "LTE"
 	GTE    TokenType = "GTE"
+	MOD    TokenType = "MOD"
+
+	PLUS_ASSIGN  TokenType = "PLUS_ASSIGN"
+	MINUS_ASSIGN TokenType = "MINUS_ASSIGN"
+	STAR_ASSIGN  TokenType = "STAR_ASSIGN"
+	SLASH_ASSIGN TokenType = "SLASH_ASSIGN"
 )
 
 type Token struct {
@@ -75,7 +83,9 @@ var Keywords = map[string]TokenType{
 	"and":    AND,
 	"or":     OR,
 	"not":    NOT,
-	"import": IMPORT,
+	"import":  IMPORT,
+	"break":   BREAK,
+	"continue": CONTINUE,
 }
 
 func LookupIdent(ident string) TokenType {

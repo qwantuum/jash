@@ -366,10 +366,10 @@ import module_name
 | `math`      | `sqrt()`, `abs()`, `floor()`, `ceil()`, `sin()`, `cos()` |
 | `random`    | `int(min, max)`, `float()`, `choice(array)` |
 | `time`      | `sleep(seconds)`, `now()`, `format(layout)` |
-| `file`      | `read(path)`, `write(path, content)`, `append(path, content)` |
-| `ai`        | `prompt(text)` — отправляет текст AI-модели и возвращает ответ |
-| `image`     | `load(path)`, `resize(img, w, h)`, `save(img, path)`, `create(w, h)` |
-| `jash_ui`   | `window(title, w, h, content)` — создаёт GUI-окно |
+| `file`      | `read(path)`, `write(path, content)` |
+| `ai`        | `predict(text)` — отправляет текст AI-модели и возвращает ответ |
+| `image`     | `ascii(path)` — конвертирует изображение в ASCII-арт |
+| `jash_ui`   | `window(title, width?, height?)` — создаёт GUI-окно |
 
 **Встроенные функции** (доступны без импорта): `print()`, `len()`, `type()`, `say()`, `any()`, `serve()`
 

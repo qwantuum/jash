@@ -105,10 +105,10 @@ Simply write `import module_name` at the top of your script to enable that modul
 | `math`      | `sqrt()`, `abs()`, `floor()`, `ceil()`, `sin()`, `cos()`                |
 | `random`    | `int(min, max)`, `float()`, `choice(array)`                              |
 | `time`      | `sleep(seconds)`, `now()`, `format(layout)`                              |
-| `file`      | `read(path)`, `write(path, content)`, `append(path, content)`            |
-| `ai`        | `prompt(text)` — sends text to an AI model and returns the response      |
-| `image`     | `load(path)`, `resize(img, w, h)`, `save(img, path)`, `create(w, h)`    |
-| `jash_ui`   | `window(title, w, h, content)` — creates a GUI window                    |
+| `file`      | `read(path)`, `write(path, content)`                                      |
+| `ai`        | `predict(text)` — sends text to an AI model and returns the response      |
+| `image`     | `ascii(path)` — converts an image to ASCII art                            |
+| `jash_ui`   | `window(title, width?, height?)` — creates a GUI window                   |
 
 ---
 

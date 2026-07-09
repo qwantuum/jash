@@ -12,6 +12,7 @@ const (
 	OpSub
 	OpMul
 	OpDiv
+	OpMod
 	OpEq
 	OpNeq
 	OpLt

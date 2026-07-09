@@ -85,16 +85,43 @@ func (l *Lexer) Tokenize() ([]token.Token, []string) {
 				l.readChar()
 			}
 		case l.ch == '+':
-			l.emitToken(token.PLUS, string(l.ch))
-			l.readChar()
+			if l.peekChar() == '=' {
+				l.readChar()
+				l.emitToken(token.PLUS_ASSIGN, "+=")
+				l.readChar()
+			} else {
+				l.emitToken(token.PLUS, string(l.ch))
+				l.readChar()
+			}
 		case l.ch == '-':
-			l.emitToken(token.MINUS, string(l.ch))
-			l.readChar()
+			if l.peekChar() == '=' {
+				l.readChar()
+				l.emitToken(token.MINUS_ASSIGN, "-=")
+				l.readChar()
+			} else {
+				l.emitToken(token.MINUS, string(l.ch))
+				l.readChar()
+			}
 		case l.ch == '*':
-			l.emitToken(token.STAR, string(l.ch))
-			l.readChar()
+			if l.peekChar() == '=' {
+				l.readChar()
+				l.emitToken(token.STAR_ASSIGN, "*=")
+				l.readChar()
+			} else {
+				l.emitToken(token.STAR, string(l.ch))
+				l.readChar()
+			}
 		case l.ch == '/':
-			l.emitToken(token.SLASH, string(l.ch))
+			if l.peekChar() == '=' {
+				l.readChar()
+				l.emitToken(token.SLASH_ASSIGN, "/=")
+				l.readChar()
+			} else {
+				l.emitToken(token.SLASH, string(l.ch))
+				l.readChar()
+			}
+		case l.ch == '%':
+			l.emitToken(token.MOD, string(l.ch))
 			l.readChar()
 		case l.ch == '(':
 			l.emitToken(token.LPAREN, string(l.ch))

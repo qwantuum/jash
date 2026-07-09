@@ -74,6 +74,8 @@ const (
 	FUNCTION_OBJ   ObjectType = "FUNCTION"
 	BUILTIN_OBJ    ObjectType = "BUILTIN"
 	RETURN_OBJ     ObjectType = "RETURN"
+	BREAK_OBJ      ObjectType = "BREAK"
+	CONTINUE_OBJ   ObjectType = "CONTINUE"
 	ERROR_OBJ      ObjectType = "ERROR"
 )
 
@@ -183,6 +185,16 @@ type ReturnValue struct {
 
 func (rv *ReturnValue) Type() ObjectType { return RETURN_OBJ }
 func (rv *ReturnValue) Inspect() string  { return rv.Value.Inspect() }
+
+type BreakSignal struct{}
+
+func (bs *BreakSignal) Type() ObjectType  { return BREAK_OBJ }
+func (bs *BreakSignal) Inspect() string   { return "break" }
+
+type ContinueSignal struct{}
+
+func (cs *ContinueSignal) Type() ObjectType { return CONTINUE_OBJ }
+func (cs *ContinueSignal) Inspect() string  { return "continue" }
 
 type Error struct {
 	Message string
@@ -378,6 +390,10 @@ func Eval(node ast.Node, env *Environment) Object {
 		return evalReturnStatement(n, env)
 	case *ast.ImportStatement:
 		return evalImportStatement(n, env)
+	case *ast.BreakStatement:
+		return &BreakSignal{}
+	case *ast.ContinueStatement:
+		return &ContinueSignal{}
 	case *ast.AssignStatement:
 		return evalAssignStatement(n, env)
 	case *ast.ExpressionStatement:
@@ -411,6 +427,8 @@ func Eval(node ast.Node, env *Environment) Object {
 		return evalCallExpression(n, env)
 	case *ast.MemberAccess:
 		return evalMemberAccess(n, env)
+	case *ast.IndexExpression:
+		return evalIndexExpression(n, env)
 	case *ast.InfixExpression:
 		return evalInfixExpression(n, env)
 	case *ast.PrefixExpression:
@@ -440,6 +458,8 @@ func evalProgram(program *ast.Program, env *Environment) Object {
 		switch r := result.(type) {
 		case *ReturnValue:
 			return r.Value
+		case *BreakSignal, *ContinueSignal:
+			return result
 		case *Error:
 			return r
 		}
@@ -453,7 +473,7 @@ func evalBlockStatement(block *ast.BlockStatement, env *Environment) Object {
 		result = Eval(stmt, env)
 		if result != nil {
 			rt := result.Type()
-			if rt == RETURN_OBJ || rt == ERROR_OBJ {
+			if rt == RETURN_OBJ || rt == BREAK_OBJ || rt == CONTINUE_OBJ || rt == ERROR_OBJ {
 				return result
 			}
 		}
@@ -520,10 +540,14 @@ func evalForStatement(node *ast.ForStatement, env *Environment) Object {
 			env.Set(node.Variable.Value, elem)
 			r := Eval(node.Body, env)
 			if r != nil {
-				if r.Type() == RETURN_OBJ {
+				switch r.Type() {
+				case RETURN_OBJ:
 					return r
-				}
-				if isError(r) {
+				case BREAK_OBJ:
+					return result
+				case CONTINUE_OBJ:
+					continue
+				case ERROR_OBJ:
 					return r
 				}
 				result = r
@@ -534,10 +558,14 @@ func evalForStatement(node *ast.ForStatement, env *Environment) Object {
 			env.Set(node.Variable.Value, &String{Value: string(ch)})
 			r := Eval(node.Body, env)
 			if r != nil {
-				if r.Type() == RETURN_OBJ {
+				switch r.Type() {
+				case RETURN_OBJ:
 					return r
-				}
-				if isError(r) {
+				case BREAK_OBJ:
+					return result
+				case CONTINUE_OBJ:
+					continue
+				case ERROR_OBJ:
 					return r
 				}
 				result = r
@@ -548,10 +576,14 @@ func evalForStatement(node *ast.ForStatement, env *Environment) Object {
 			env.Set(node.Variable.Value, &String{Value: key})
 			r := Eval(node.Body, env)
 			if r != nil {
-				if r.Type() == RETURN_OBJ {
+				switch r.Type() {
+				case RETURN_OBJ:
 					return r
-				}
-				if isError(r) {
+				case BREAK_OBJ:
+					return result
+				case CONTINUE_OBJ:
+					continue
+				case ERROR_OBJ:
 					return r
 				}
 				result = r
@@ -576,10 +608,14 @@ func evalWhileStatement(node *ast.WhileStatement, env *Environment) Object {
 		}
 		r := Eval(node.Body, env)
 		if r != nil {
-			if r.Type() == RETURN_OBJ {
+			switch r.Type() {
+			case RETURN_OBJ:
 				return r
-			}
-			if isError(r) {
+			case BREAK_OBJ:
+				return result
+			case CONTINUE_OBJ:
+				continue
+			case ERROR_OBJ:
 				return r
 			}
 			result = r
@@ -603,10 +639,14 @@ func evalRepeatStatement(node *ast.RepeatStatement, env *Environment) Object {
 	for i := int64(0); i < count.Value; i++ {
 		r := Eval(node.Body, env)
 		if r != nil {
-			if r.Type() == RETURN_OBJ {
+			switch r.Type() {
+			case RETURN_OBJ:
 				return r
-			}
-			if isError(r) {
+			case BREAK_OBJ:
+				return result
+			case CONTINUE_OBJ:
+				continue
+			case ERROR_OBJ:
 				return r
 			}
 			result = r
@@ -718,6 +758,45 @@ func evalMemberAccess(node *ast.MemberAccess, env *Environment) Object {
 	}
 }
 
+func evalIndexExpression(node *ast.IndexExpression, env *Environment) Object {
+	left := Eval(node.Left, env)
+	if isError(left) {
+		return left
+	}
+	index := Eval(node.Index, env)
+	if isError(index) {
+		return index
+	}
+
+	idx, ok := index.(*Integer)
+	if !ok {
+		return &Error{Message: fmt.Sprintf("index must be an integer, got %s", index.Type())}
+	}
+
+	switch o := left.(type) {
+	case *JSONArray:
+		i := idx.Value
+		if i < 0 {
+			i = int64(len(o.Elements)) + i
+		}
+		if i < 0 || i >= int64(len(o.Elements)) {
+			return &Error{Message: fmt.Sprintf("index out of bounds: %d (len %d)", idx.Value, len(o.Elements))}
+		}
+		return o.Elements[i]
+	case *String:
+		i := idx.Value
+		if i < 0 {
+			i = int64(len(o.Value)) + i
+		}
+		if i < 0 || i >= int64(len(o.Value)) {
+			return &Error{Message: fmt.Sprintf("index out of bounds: %d (len %d)", idx.Value, len(o.Value))}
+		}
+		return &String{Value: string(o.Value[i])}
+	default:
+		return &Error{Message: fmt.Sprintf("cannot index %s", left.Type())}
+	}
+}
+
 func evalInfixExpression(node *ast.InfixExpression, env *Environment) Object {
 	left := Eval(node.Left, env)
 	if isError(left) {
@@ -784,6 +863,11 @@ func evalIntegerInfixExpression(operator string, left, right Object) Object {
 			return &Error{Message: "division by zero"}
 		}
 		return &Integer{Value: l / r}
+	case "%":
+		if r == 0 {
+			return &Error{Message: "division by zero"}
+		}
+		return &Integer{Value: l % r}
 	case "<":
 		return nativeBoolToBooleanObject(l < r)
 	case ">":
@@ -1179,19 +1263,101 @@ func timeStopFunc(args ...Object) Object {
 }
 
 func aiPredictFunc(args ...Object) Object {
-	input := ""
-	if len(args) > 0 {
-		input = args[0].Inspect()
+	if len(args) != 1 {
+		return &Error{Message: "ai.predict() requires exactly 1 argument: prompt"}
+	}
+	prompt, ok := args[0].(*String)
+	if !ok {
+		return &Error{Message: "ai.predict() argument must be a string"}
 	}
 
-	return &JSONObject{
-		Pairs: map[string]Object{
-			"prediction": &String{Value: "positive"},
-			"confidence": &Float{Value: 0.9532},
-			"model":      &String{Value: "Jash-AI v1.0"},
-			"input":      &String{Value: input},
-		},
+	host := os.Getenv("OLLAMA_HOST")
+	if host == "" {
+		host = "http://localhost:11434"
 	}
+
+	model := pickWeakestModel(host)
+	if isError(model) {
+		return model
+	}
+	modelName, _ := model.(*String)
+
+	body := map[string]interface{}{
+		"model":  modelName.Value,
+		"prompt": prompt.Value,
+		"stream": false,
+	}
+
+	result := ollamaRequest(host+"/api/generate", body)
+	if isError(result) {
+		return result
+	}
+
+	obj, ok := result.(*JSONObject)
+	if !ok {
+		return &Error{Message: "ai.predict(): unexpected response format"}
+	}
+
+	response, ok := obj.Pairs["response"]
+	if !ok {
+		return &Error{Message: "ai.predict(): no response in Ollama output"}
+	}
+
+	return response
+}
+
+func pickWeakestModel(host string) Object {
+	resp, err := http.Get(host + "/api/tags")
+	if err != nil {
+		return &Error{Message: fmt.Sprintf("ai.predict(): failed to fetch model list: %s", err)}
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return &Error{Message: fmt.Sprintf("ai.predict(): failed to read model list: %s", err)}
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return &Error{Message: fmt.Sprintf("ai.predict(): failed to parse model list: %s", err)}
+	}
+
+	modelsRaw, ok := result["models"]
+	if !ok {
+		return &Error{Message: "ai.predict(): no models found in Ollama"}
+	}
+
+	modelsList, ok := modelsRaw.([]interface{})
+	if !ok || len(modelsList) == 0 {
+		return &Error{Message: "ai.predict(): no models available in Ollama"}
+	}
+
+	var weakest string
+	var smallestSize float64 = -1
+
+	for _, m := range modelsList {
+		entry, ok := m.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, _ := entry["name"].(string)
+		size, _ := entry["size"].(float64)
+
+		if name == "" {
+			continue
+		}
+		if smallestSize < 0 || size < smallestSize {
+			smallestSize = size
+			weakest = name
+		}
+	}
+
+	if weakest == "" {
+		return &Error{Message: "ai.predict(): could not determine weakest model"}
+	}
+
+	return &String{Value: weakest}
 }
 
 func ollamaFunc(args ...Object) Object {

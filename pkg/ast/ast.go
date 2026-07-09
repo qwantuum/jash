@@ -202,6 +202,18 @@ func (is *ImportStatement) String() string {
 	return "import " + is.Module.String()
 }
 
+type BreakStatement struct{}
+
+func (bs *BreakStatement) statementNode()       {}
+func (bs *BreakStatement) TokenLiteral() string { return "break" }
+func (bs *BreakStatement) String() string       { return "break" }
+
+type ContinueStatement struct{}
+
+func (cs *ContinueStatement) statementNode()       {}
+func (cs *ContinueStatement) TokenLiteral() string { return "continue" }
+func (cs *ContinueStatement) String() string       { return "continue" }
+
 type Identifier struct {
 	Value string
 }
@@ -310,6 +322,17 @@ func (ma *MemberAccess) expressionNode()      {}
 func (ma *MemberAccess) TokenLiteral() string { return "." }
 func (ma *MemberAccess) String() string {
 	return ma.Object.String() + "." + ma.Member.String()
+}
+
+type IndexExpression struct {
+	Left  Expression
+	Index Expression
+}
+
+func (ie *IndexExpression) expressionNode()      {}
+func (ie *IndexExpression) TokenLiteral() string { return "[" }
+func (ie *IndexExpression) String() string {
+	return ie.Left.String() + "[" + ie.Index.String() + "]"
 }
 
 type InfixExpression struct {

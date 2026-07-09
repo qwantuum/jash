@@ -58,7 +58,7 @@ cd jash
 go build -o jash ./cmd/jash
 
 # Run a Jash script
-./jash examples/hello.jash
+./jash script.jash
 ```
 
 ### Hello, World
@@ -254,10 +254,10 @@ import jash_ui
 | `math`      | `sqrt()`, `abs()`, `floor()`, `ceil()`, `sin()`, `cos()`                |
 | `random`    | `int(min, max)`, `float()`, `choice(array)`                              |
 | `time`      | `sleep(seconds)`, `now()`, `format(layout)`                              |
-| `file`      | `read(path)`, `write(path, content)`, `append(path, content)`            |
-| `ai`        | `prompt(text)` — sends text to an AI model and returns the response      |
-| `image`     | `load(path)`, `resize(img, w, h)`, `save(img, path)`, `create(w, h)`    |
-| `jash_ui`   | `window(title, w, h, content)` — creates a GUI window                    |
+| `file`      | `read(path)`, `write(path, content)`                                      |
+| `ai`        | `predict(text)` — sends text to an AI model and returns the response      |
+| `image`     | `ascii(path)` — converts an image to ASCII art                            |
+| `jash_ui`   | `window(title, width?, height?)` — creates a GUI window                   |
 
 Core builtins (`print()`, `len()`, `type()`, `say()`, `any()`, `serve()`) are always available without any import.
 
@@ -324,9 +324,7 @@ The binary requires no dependencies beyond the Go standard library.
 jash/
   go.mod
   README.md
-  builderexe.py              # Build & deploy script
   cmd/jash/main.go           # Entry point
-  debug_lexer/main.go        # Standalone lexer debug tool
   pkg/
     token/token.go            # Token definitions
     lexer/lexer.go            # Lexer with indentation tracking

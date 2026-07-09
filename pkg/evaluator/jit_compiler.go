@@ -84,6 +84,14 @@ func (c *compiler) compileStatement(stmt ast.Statement) {
 		c.compileIf(s)
 	case *ast.ForStatement:
 		c.compileFor(s)
+	case *ast.RepeatStatement:
+		c.failed = true
+	case *ast.ImportStatement:
+		c.failed = true
+	case *ast.BreakStatement:
+		c.failed = true
+	case *ast.ContinueStatement:
+		c.failed = true
 	case *ast.WhileStatement:
 		c.compileWhile(s)
 	case *ast.FunctionStatement:
@@ -119,12 +127,8 @@ func (c *compiler) compileIf(stmt *ast.IfStatement) {
 	}
 }
 
-func (c *compiler) compileFor(stmt *ast.ForStatement) {
-	start := len(c.instructions)
-	c.compileNode(stmt.Iterable)
-	c.emit(OpLoad, c.getVarIndex(stmt.Variable.Value))
-	c.compileBlock(stmt.Body)
-	c.emit(OpJump, start)
+func (c *compiler) compileFor(_ *ast.ForStatement) {
+	c.failed = true
 }
 
 func (c *compiler) compileWhile(stmt *ast.WhileStatement) {
@@ -194,6 +198,8 @@ func (c *compiler) compileNode(node ast.Node) {
 		c.compileNode(n.Object)
 		idx := c.addConstant(n.Member.Value)
 		c.emit(OpGetMember, idx)
+	case *ast.IndexExpression:
+		c.failed = true
 	case *ast.JSONArray:
 		c.emit(OpNewArray)
 		for _, elem := range n.Elements {
@@ -249,6 +255,8 @@ func (c *compiler) infixOp(op string) Opcode {
 		return OpMul
 	case "/":
 		return OpDiv
+	case "%":
+		return OpMod
 	case "==":
 		return OpEq
 	case "!=":

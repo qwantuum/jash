@@ -64,6 +64,7 @@ func New(tokens []token.Token) *Parser {
 	p.registerInfix(token.MINUS, p.parseInfixExpression)
 	p.registerInfix(token.STAR, p.parseInfixExpression)
 	p.registerInfix(token.SLASH, p.parseInfixExpression)
+	p.registerInfix(token.MOD, p.parseInfixExpression)
 	p.registerInfix(token.EQ, p.parseInfixExpression)
 	p.registerInfix(token.NEQ, p.parseInfixExpression)
 	p.registerInfix(token.LT, p.parseInfixExpression)
@@ -74,6 +75,7 @@ func New(tokens []token.Token) *Parser {
 	p.registerInfix(token.OR, p.parseInfixExpression)
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
 	p.registerInfix(token.DOT, p.parseMemberAccess)
+	p.registerInfix(token.LBRACKET, p.parseIndexExpression)
 
 	if len(tokens) > 0 {
 		p.peekToken = tokens[0]
@@ -162,9 +164,16 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseRepeatStatement()
 	case token.IMPORT:
 		return p.parseImportStatement()
+	case token.BREAK:
+		return p.parseBreakStatement()
+	case token.CONTINUE:
+		return p.parseContinueStatement()
 	case token.IDENT:
-		if p.peekToken.Type == token.ASSIGN {
+		switch p.peekToken.Type {
+		case token.ASSIGN:
 			return p.parseAssignStatement()
+		case token.PLUS_ASSIGN, token.MINUS_ASSIGN, token.STAR_ASSIGN, token.SLASH_ASSIGN:
+			return p.parseCompoundAssignStatement()
 		}
 		return p.parseExpressionStatement()
 	default:
@@ -223,6 +232,38 @@ func (p *Parser) parseAssignStatement() *ast.AssignStatement {
 	p.nextToken()
 
 	stmt.Value = p.parseExpression(LOWEST)
+	if p.peekToken.Type == token.NEWLINE || p.peekToken.Type == token.DEDENT {
+		p.nextToken()
+	}
+
+	return stmt
+}
+
+func (p *Parser) parseCompoundAssignStatement() *ast.AssignStatement {
+	name := p.curToken.Literal
+	op := ""
+	switch p.peekToken.Type {
+	case token.PLUS_ASSIGN:
+		op = "+"
+	case token.MINUS_ASSIGN:
+		op = "-"
+	case token.STAR_ASSIGN:
+		op = "*"
+	case token.SLASH_ASSIGN:
+		op = "/"
+	}
+	p.nextToken()
+	p.nextToken()
+
+	right := p.parseExpression(LOWEST)
+	stmt := &ast.AssignStatement{
+		Name: &ast.Identifier{Value: name},
+		Value: &ast.InfixExpression{
+			Left:     &ast.Identifier{Value: name},
+			Operator: op,
+			Right:    right,
+		},
+	}
 	if p.peekToken.Type == token.NEWLINE || p.peekToken.Type == token.DEDENT {
 		p.nextToken()
 	}
@@ -533,7 +574,7 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 		return expr
 	}
 
-	for !p.curTokenIs(token.RPAREN) && !p.curTokenIs(token.EOF) {
+	for !p.curTokenIs(token.RPAREN) && !p.curTokenIs(token.EOF) && !p.curTokenIs(token.NEWLINE) {
 		if p.curTokenIs(token.COMMA) {
 			p.nextToken()
 			continue
@@ -541,6 +582,10 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 
 		arg := p.parseExpression(LOWEST)
 		expr.Arguments = append(expr.Arguments, arg)
+
+		if p.curTokenIs(token.RPAREN) || p.curTokenIs(token.NEWLINE) {
+			break
+		}
 		p.nextToken()
 
 		if p.curTokenIs(token.COMMA) {
@@ -564,6 +609,34 @@ func (p *Parser) parseMemberAccess(obj ast.Expression) ast.Expression {
 	return expr
 }
 
+func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
+	expr := &ast.IndexExpression{Left: left}
+	p.nextToken()
+	expr.Index = p.parseExpression(LOWEST)
+	if !p.expect(token.RBRACKET) {
+		return nil
+	}
+	return expr
+}
+
+func (p *Parser) parseBreakStatement() ast.Statement {
+	p.nextToken()
+	stmt := &ast.BreakStatement{}
+	if p.peekToken.Type == token.NEWLINE || p.peekToken.Type == token.DEDENT {
+		p.nextToken()
+	}
+	return stmt
+}
+
+func (p *Parser) parseContinueStatement() ast.Statement {
+	p.nextToken()
+	stmt := &ast.ContinueStatement{}
+	if p.peekToken.Type == token.NEWLINE || p.peekToken.Type == token.DEDENT {
+		p.nextToken()
+	}
+	return stmt
+}
+
 func (p *Parser) peekPrecedence() int {
 	return precedenceOf(p.peekToken.Type)
 }
@@ -584,9 +657,11 @@ func precedenceOf(t token.TokenType) int {
 		return COMPARISON
 	case token.PLUS, token.MINUS:
 		return SUM
-	case token.STAR, token.SLASH:
+	case token.STAR, token.SLASH, token.MOD:
 		return PRODUCT
 	case token.LPAREN:
+		return CALL
+	case token.LBRACKET:
 		return CALL
 	case token.DOT:
 		return MEMBER

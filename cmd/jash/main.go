@@ -12,6 +12,13 @@ import (
 )
 
 func runFile(filename string, stacktrace bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "Panic: %v\n", r)
+			os.Exit(1)
+		}
+	}()
+
 	evaluator.StacktraceEnabled = stacktrace
 	evaluator.InitJIT()
 
@@ -60,52 +67,69 @@ func runFile(filename string, stacktrace bool) {
 }
 
 func runREPL() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "REPL panic: %v\n", r)
+		}
+	}()
+
 	evaluator.InitJIT()
 	env := evaluator.NewEnvironment()
 	scanner := bufio.NewScanner(os.Stdin)
 
 	fmt.Println("Jash REPL")
+	fmt.Println("Enter blank line to evaluate, or 'exit' to quit")
+
+	var lines []string
 
 	for {
-		fmt.Print("\n> ")
-
+		fmt.Print("  ")
 		if !scanner.Scan() {
 			break
 		}
 
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		if line == "exit" {
+		line := scanner.Text()
+		if strings.TrimSpace(line) == "exit" {
 			break
 		}
 
-		l := lexer.New(line)
-		tokens, errs := l.Tokenize()
-		if len(errs) > 0 {
-			for _, e := range errs {
-				fmt.Fprintln(os.Stderr, e)
-			}
-			continue
-		}
+		lines = append(lines, line)
 
-		p := parser.New(tokens)
-		program := p.ParseProgram()
-		if len(p.Errors()) > 0 {
-			for _, e := range p.Errors() {
-				fmt.Fprintln(os.Stderr, e)
-			}
-			continue
-		}
+		if strings.TrimSpace(line) == "" {
+			input := strings.Join(lines, "\n")
+			lines = nil
 
-		result := evaluator.Eval(program, env)
-		if result != nil && result.Type() != evaluator.NULL_OBJ && result.Type() != evaluator.RETURN_OBJ {
-			switch r := result.(type) {
-			case *evaluator.Error:
-				fmt.Fprintf(os.Stderr, "Error: %s\n", r.Message)
-			default:
-				fmt.Println(result.Inspect())
+			input = strings.TrimSpace(input)
+			if input == "" {
+				continue
+			}
+
+			l := lexer.New(input)
+			tokens, errs := l.Tokenize()
+			if len(errs) > 0 {
+				for _, e := range errs {
+					fmt.Fprintln(os.Stderr, e)
+				}
+				continue
+			}
+
+			p := parser.New(tokens)
+			program := p.ParseProgram()
+			if len(p.Errors()) > 0 {
+				for _, e := range p.Errors() {
+					fmt.Fprintln(os.Stderr, e)
+				}
+				continue
+			}
+
+			result := evaluator.Eval(program, env)
+			if result != nil && result.Type() != evaluator.NULL_OBJ && result.Type() != evaluator.RETURN_OBJ {
+				switch r := result.(type) {
+				case *evaluator.Error:
+					fmt.Fprintf(os.Stderr, "Error: %s\n", r.Message)
+				default:
+					fmt.Println(result.Inspect())
+				}
 			}
 		}
 	}

@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/qwantuum/jash/pkg/ast"
@@ -237,45 +238,126 @@ func (e *Environment) loadBuiltins() {
 	e.store["type"] = &Builtin{Name: "type", Fn: typeFunc}
 	e.store["say"] = &Builtin{Name: "say", Fn: sayFunc}
 	e.store["any"] = &Builtin{Name: "any", Fn: anyFunc}
+}
 
-	aiObj := &JSONObject{
+var modulesInit sync.Once
+var modulesVal map[string]Object
+
+func getModules() map[string]Object {
+	modulesInit.Do(func() {
+		modulesVal = map[string]Object{
+	"ai": &JSONObject{
 		Pairs: map[string]Object{
 			"predict": &Builtin{Name: "ai.predict", Fn: aiPredictFunc},
 			"ollama":  &Builtin{Name: "ai.ollama", Fn: ollamaFunc},
 		},
-	}
-	e.store["ai"] = aiObj
-
-	jashUIObj := &JSONObject{
+	},
+	"jash_ui": &JSONObject{
 		Pairs: map[string]Object{
 			"window": &Builtin{Name: "jash_ui.window", Fn: uiWindowFunc},
 		},
-	}
-	e.store["jash_ui"] = jashUIObj
-
-	imageObj := &JSONObject{
+	},
+	"image": &JSONObject{
 		Pairs: map[string]Object{
 			"ascii": &Builtin{Name: "image.ascii", Fn: imageASCIIFunc},
 		},
-	}
-	e.store["image"] = imageObj
-
-	fileObj := &JSONObject{
+	},
+	"file": &JSONObject{
 		Pairs: map[string]Object{
 			"read":  &Builtin{Name: "file.read", Fn: fileReadFunc},
 			"write": &Builtin{Name: "file.write", Fn: fileWriteFunc},
 		},
-	}
-	e.store["file"] = fileObj
-
-	timeObj := &JSONObject{
+	},
+	"time": &JSONObject{
 		Pairs: map[string]Object{
-			"sleep": &Builtin{Name: "time.sleep", Fn: timeSleepFunc},
-			"start": &Builtin{Name: "time.start", Fn: timeStartFunc},
-			"stop":  &Builtin{Name: "time.stop", Fn: timeStopFunc},
+			"sleep":  &Builtin{Name: "time.sleep", Fn: timeSleepFunc},
+			"now":    &Builtin{Name: "time.now", Fn: timeNowFunc},
+			"format": &Builtin{Name: "time.format", Fn: timeFormatFunc},
+			"start":  &Builtin{Name: "time.start", Fn: timeStartFunc},
+			"stop":   &Builtin{Name: "time.stop", Fn: timeStopFunc},
 		},
-	}
-	e.store["time"] = timeObj
+	},
+	"math": &JSONObject{
+		Pairs: map[string]Object{
+			"sin": &Builtin{Name: "math.sin", Fn: func(args ...Object) Object {
+				if len(args) != 1 { return &Error{Message: "math.sin() requires 1 argument"} }
+				switch o := args[0].(type) {
+				case *Integer: return &Float{Value: math.Sin(float64(o.Value))}
+				case *Float: return &Float{Value: math.Sin(o.Value)}
+				default: return &Error{Message: "math.sin() requires a number"}
+				}
+			}},
+			"cos": &Builtin{Name: "math.cos", Fn: func(args ...Object) Object {
+				if len(args) != 1 { return &Error{Message: "math.cos() requires 1 argument"} }
+				switch o := args[0].(type) {
+				case *Integer: return &Float{Value: math.Cos(float64(o.Value))}
+				case *Float: return &Float{Value: math.Cos(o.Value)}
+				default: return &Error{Message: "math.cos() requires a number"}
+				}
+			}},
+			"sqrt": &Builtin{Name: "math.sqrt", Fn: func(args ...Object) Object {
+				if len(args) != 1 { return &Error{Message: "math.sqrt() requires 1 argument"} }
+				switch o := args[0].(type) {
+				case *Integer: return &Float{Value: math.Sqrt(float64(o.Value))}
+				case *Float: return &Float{Value: math.Sqrt(o.Value)}
+				default: return &Error{Message: "math.sqrt() requires a number"}
+				}
+			}},
+			"abs": &Builtin{Name: "math.abs", Fn: func(args ...Object) Object {
+				if len(args) != 1 { return &Error{Message: "math.abs() requires 1 argument"} }
+				switch o := args[0].(type) {
+				case *Integer:
+					v := o.Value
+					if v < 0 { v = -v }
+					return &Integer{Value: v}
+				case *Float:
+					return &Float{Value: math.Abs(o.Value)}
+				default: return &Error{Message: "math.abs() requires a number"}
+				}
+			}},
+			"floor": &Builtin{Name: "math.floor", Fn: func(args ...Object) Object {
+				if len(args) != 1 { return &Error{Message: "math.floor() requires 1 argument"} }
+				switch o := args[0].(type) {
+				case *Integer: return &Float{Value: float64(o.Value)}
+				case *Float: return &Float{Value: math.Floor(o.Value)}
+				default: return &Error{Message: "math.floor() requires a number"}
+				}
+			}},
+			"ceil": &Builtin{Name: "math.ceil", Fn: func(args ...Object) Object {
+				if len(args) != 1 { return &Error{Message: "math.ceil() requires 1 argument"} }
+				switch o := args[0].(type) {
+				case *Integer: return &Float{Value: float64(o.Value)}
+				case *Float: return &Float{Value: math.Ceil(o.Value)}
+				default: return &Error{Message: "math.ceil() requires a number"}
+				}
+			}},
+		},
+	},
+	"random": &JSONObject{
+		Pairs: map[string]Object{
+			"int": &Builtin{Name: "random.int", Fn: func(args ...Object) Object {
+				if len(args) != 2 { return &Error{Message: "random.int() requires 2 arguments: min max"} }
+				min, ok1 := args[0].(*Integer)
+				max, ok2 := args[1].(*Integer)
+				if !ok1 || !ok2 { return &Error{Message: "random.int() arguments must be integers"} }
+				if min.Value >= max.Value { return &Error{Message: "random.int() min must be less than max"} }
+				return &Integer{Value: min.Value + rand.Int63n(max.Value - min.Value)}
+			}},
+			"float": &Builtin{Name: "random.float", Fn: func(args ...Object) Object {
+				return &Float{Value: rand.Float64()}
+			}},
+			"choice": &Builtin{Name: "random.choice", Fn: func(args ...Object) Object {
+				if len(args) != 1 { return &Error{Message: "random.choice() requires 1 argument: array"} }
+				arr, ok := args[0].(*JSONArray)
+				if !ok { return &Error{Message: "random.choice() argument must be an array"} }
+				if len(arr.Elements) == 0 { return NULL }
+				return arr.Elements[rand.Intn(len(arr.Elements))]
+			}},
+		},
+	},
+}
+})
+return modulesVal
 }
 
 var (
@@ -294,6 +376,8 @@ func Eval(node ast.Node, env *Environment) Object {
 		return evalFunctionStatement(n, env)
 	case *ast.ReturnStatement:
 		return evalReturnStatement(n, env)
+	case *ast.ImportStatement:
+		return evalImportStatement(n, env)
 	case *ast.AssignStatement:
 		return evalAssignStatement(n, env)
 	case *ast.ExpressionStatement:
@@ -879,19 +963,29 @@ func sayFunc(args ...Object) Object {
 	if !ok {
 		return &Error{Message: "say() argument must be a string"}
 	}
-	go func() {
-		var cmd *exec.Cmd
-		switch runtime.GOOS {
-		case "darwin":
-			cmd = exec.Command("say", text.Value)
-		case "windows":
-			psCmd := fmt.Sprintf("Add-Type -AssemblyName System.speech; $speak = New-Object System.Speech.Synthesis.SpeechSynthesizer; $speak.Speak('%s')", text.Value)
-			cmd = exec.Command("powershell", "-Command", psCmd)
-		default:
-			cmd = exec.Command("espeak", text.Value)
-		}
+	textGo := text.Value
+	startTTY := func(cmd *exec.Cmd) {
+		cmd.Stderr = os.Stderr
 		cmd.Start()
-	}()
+	}
+	switch runtime.GOOS {
+	case "darwin":
+		startTTY(exec.Command("say", textGo))
+	case "windows":
+		safe := strings.ReplaceAll(textGo, "'", "''")
+		psCmd := fmt.Sprintf("Add-Type -AssemblyName System.speech; $speak = New-Object System.Speech.Synthesis.SpeechSynthesizer; $speak.Speak('%s')", safe)
+		startTTY(exec.Command("powershell", "-Command", psCmd))
+	default:
+		prog := "espeak"
+		if _, err := exec.LookPath("espeak-ng"); err == nil {
+			prog = "espeak-ng"
+		} else if _, err := exec.LookPath("espeak"); err != nil {
+			fmt.Fprintf(os.Stderr, "say: neither espeak-ng nor espeak found\n")
+			return NULL
+		}
+		cmd := exec.Command(prog, textGo)
+		startTTY(cmd)
+	}
 	return NULL
 }
 
@@ -914,6 +1008,16 @@ func anyFunc(args ...Object) Object {
 	default:
 		return &Error{Message: fmt.Sprintf("any() not supported for %s", args[0].Type())}
 	}
+}
+
+func evalImportStatement(node *ast.ImportStatement, env *Environment) Object {
+	name := node.Module.Value
+	mod, ok := getModules()[name]
+	if !ok {
+		return &Error{Message: fmt.Sprintf("module not found: %s", name)}
+	}
+	env.Set(name, mod)
+	return NULL
 }
 
 func printFunc(args ...Object) Object {
@@ -975,6 +1079,21 @@ func timeSleepFunc(args ...Object) Object {
 
 	time.Sleep(time.Duration(secs * 1e9))
 	return NULL
+}
+
+func timeNowFunc(args ...Object) Object {
+	return &String{Value: time.Now().Format("2006-01-02 15:04:05")}
+}
+
+func timeFormatFunc(args ...Object) Object {
+	if len(args) != 1 {
+		return &Error{Message: "time.format() requires exactly 1 argument: layout"}
+	}
+	s, ok := args[0].(*String)
+	if !ok {
+		return &Error{Message: "time.format() argument must be a string (layout)"}
+	}
+	return &String{Value: time.Now().Format(s.Value)}
 }
 
 func printGreenFunc(args ...Object) Object {

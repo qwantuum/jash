@@ -192,6 +192,16 @@ func (rs *RepeatStatement) String() string {
 	return out.String()
 }
 
+type ImportStatement struct {
+	Module *Identifier
+}
+
+func (is *ImportStatement) statementNode()       {}
+func (is *ImportStatement) TokenLiteral() string { return "import" }
+func (is *ImportStatement) String() string {
+	return "import " + is.Module.String()
+}
+
 type Identifier struct {
 	Value string
 }

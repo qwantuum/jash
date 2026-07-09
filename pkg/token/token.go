@@ -27,6 +27,7 @@ const (
 	AND    TokenType = "AND"
 	OR     TokenType = "OR"
 	NOT    TokenType = "NOT"
+	IMPORT TokenType = "IMPORT"
 
 	LBRACE   TokenType = "LBRACE"
 	RBRACE   TokenType = "RBRACE"
@@ -74,6 +75,7 @@ var Keywords = map[string]TokenType{
 	"and":    AND,
 	"or":     OR,
 	"not":    NOT,
+	"import": IMPORT,
 }
 
 func LookupIdent(ident string) TokenType {

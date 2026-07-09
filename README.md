@@ -26,6 +26,7 @@ serve(8080, handle_request)
 
 ## Features
 
+- **Module system** — `import` statement loads modules: `math`, `random`, `time`, `file`, `ai`, `image`, `jash_ui`
 - **Python-like syntax** — Whitespace-sensitive indentation, no semicolons, no curly braces for blocks
 - **Native JSON literals** — Write `{ "key": value }` and `[1, 2, 3]` directly in code
 - **Built-in HTTP server** — `serve(port, handler)` starts a production-ready HTTP server
@@ -233,6 +234,32 @@ print(models)
 | `image.ascii()` | Converts an image (file path or URL) to ASCII art and returns it |
 | `jash_ui.window()` | Creates a GUI window with labels, buttons, entries, text-areas and photos |
 | `time.sleep()` | Pauses execution for the given number of seconds (integer or float) |
+
+### Importing Modules
+
+Additional functionality is available through modules loaded with `import`:
+
+```jash
+import math
+import random
+import time
+import file
+import ai
+import image
+import jash_ui
+```
+
+| Module      | Provides                                                                 |
+|-------------|--------------------------------------------------------------------------|
+| `math`      | `sqrt()`, `abs()`, `floor()`, `ceil()`, `sin()`, `cos()`                |
+| `random`    | `int(min, max)`, `float()`, `choice(array)`                              |
+| `time`      | `sleep(seconds)`, `now()`, `format(layout)`                              |
+| `file`      | `read(path)`, `write(path, content)`, `append(path, content)`            |
+| `ai`        | `prompt(text)` — sends text to an AI model and returns the response      |
+| `image`     | `load(path)`, `resize(img, w, h)`, `save(img, path)`, `create(w, h)`    |
+| `jash_ui`   | `window(title, w, h, content)` — creates a GUI window                    |
+
+Core builtins (`print()`, `len()`, `type()`, `say()`, `any()`, `serve()`) are always available without any import.
 
 ---
 

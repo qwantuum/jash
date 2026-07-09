@@ -2,6 +2,8 @@ package evaluator
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/qwantuum/jash/pkg/ast"
 )
@@ -144,7 +146,20 @@ func (c *compiler) compileNode(node ast.Node) {
 		}
 		c.emit(OpLoad, idx)
 	case *ast.NumberLiteral:
-		idx := c.addConstant(n.Value)
+		val := n.Value
+		var cval interface{}
+		if strings.Contains(val, ".") {
+			if f, err := strconv.ParseFloat(val, 64); err == nil {
+				cval = f
+			} else {
+				cval = val
+			}
+		} else if i, err := strconv.ParseInt(val, 10, 64); err == nil {
+			cval = i
+		} else {
+			cval = val
+		}
+		idx := c.addConstant(cval)
 		c.emit(OpConstant, idx)
 	case *ast.StringLiteral:
 		idx := c.addConstant(n.Value)

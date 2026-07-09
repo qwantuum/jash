@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Jash — a minimal scripting language</title>
+<meta name="description" content="Jash is a minimal scripting language written in Go.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ===== TOP NAV ===== -->
+  <div class="nav">
+    <div class="nav-left">
+      <a href="#" class="nav-logo">
+        <span class="accent">&lt;</span>jash<span class="slash">/</span><span class="accent">&gt;</span>
+      </a>
+    </div>
+    <div class="nav-right">
+      <a href="https://github.com/qwantuum/jash" class="github-link" target="_blank" aria-label="GitHub">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+      <button class="lang-btn" data-lang-btn="en" onclick="switchLang('en')">EN</button>
+      <button class="lang-btn" data-lang-btn="ru" onclick="switchLang('ru')">RU</button>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <span class="material-symbols-outlined icon" id="theme-icon">light_mode</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label" data-en>Getting started</div>
+      <div class="sidebar-label" data-ru>Начало работы</div>
+      <a href="#" class="sidebar-item active">
+        <span class="material-symbols-outlined icon">home</span>
+        <span data-en>Introduction</span><span data-ru>Введение</span>
+      </a>
+      <a href="#install" class="sidebar-item">
+        <span class="material-symbols-outlined icon">download</span>
+        <span data-en>Installation</span><span data-ru>Установка</span>
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Language</div>
+      <a href="#syntax" class="sidebar-item">
+        <span class="material-symbols-outlined icon">code</span>
+        <span data-en>Syntax</span><span data-ru>Синтаксис</span>
+      </a>
+      <a href="#builtins" class="sidebar-item">
+        <span class="material-symbols-outlined icon">build</span>
+        Builtins
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label" data-en>Features</div>
+      <div class="sidebar-label" data-ru>Возможности</div>
+      <a href="#features" class="sidebar-item">
+        <span class="material-symbols-outlined icon">grid_view</span>
+        <span data-en>Overview</span><span data-ru>Обзор</span>
+      </a>
+      <a href="#releases" class="sidebar-item">
+        <span class="material-symbols-outlined icon">new_releases</span>
+        <span data-en>Releases</span><span data-ru>Релизы</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ===== CONTENT ===== -->
+  <main class="content">
+
+    <!-- INTRO -->
+    <div class="hero-block">
+      <div class="breadcrumb"><span data-en>Jash</span><span data-ru>Jash</span> <span data-en>v0.7.0 Public Beta</span><span data-ru>v0.7.0 Public Beta</span></div>
+      <h1><span data-en>write&nbsp;scripts.</span><span data-ru>пиши&nbsp;скрипты.</span></h1>
+      <p class="sub" data-en>A minimal, embeddable scripting language with a REPL, a JIT compiler, and a growing standard library — all written in Go.</p>
+      <p class="sub" data-ru>Минимальный встраиваемый скриптовый язык с REPL, JIT-компилятором и растущей стандартной библиотекой — целиком на Go.</p>
+      <div class="hero-actions">
+        <a href="https://github.com/qwantuum/jash" class="btn btn-primary" target="_blank">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span data-en>Source on GitHub</span><span data-ru>Исходники</span>
+        </a>
+        <a href="https://github.com/qwantuum/jash/releases" class="btn btn-secondary" target="_blank">
+          <span class="material-symbols-outlined icon">new_releases</span>
+          <span data-en>Latest release</span><span data-ru>Последний релиз</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- CODE -->
+    <div class="code-block">
+      <div class="code-header">
+        <div class="dots"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+        <span class="file-label">hello.jash</span>
+      </div>
+      <pre><code><span class="c-cm"># This is a comment</span>
+<span class="c-builtin">print</span> <span class="c-str">"hello, world!"</span>
+
+<span class="c-builtin">say</span>(<span class="c-str">"speak this aloud"</span>)
+
+<span class="c-builtin">len</span>(<span class="c-str">"jash"</span>)   <span class="c-cm"># => 4</span>
+<span class="c-builtin">type</span>(<span class="c-num">42</span>)      <span class="c-cm"># => integer</span>
+<span class="c-builtin">any</span>([<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>]) <span class="c-cm"># => random element</span>
+
+<span class="c-builtin">file</span>.<span class="c-fn">read</span>(<span class="c-str">"data.txt"</span>)
+<span class="c-builtin">serve</span>(<span class="c-num">8080</span>, handlerFn)</code></pre>
+    </div>
+
+    <!-- INSTALL -->
+    <div class="doc-section" id="install">
+      <h2><span data-en>Installation</span><span data-ru>Установка</span></h2>
+      <p class="sub" data-en>Clone the repository and build with Go.</p>
+      <p class="sub" data-ru>Склонируйте репозиторий и соберите через Go.</p>
+      <div class="code-block">
+        <div class="code-header">
+          <div class="dots"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+          <span class="file-label">terminal</span>
+        </div>
+        <pre><code>git clone https://github.com/qwantuum/jash.git
+<span class="c-cm">cd jash</span>
+go build ./cmd/jash
+./jash</code></pre>
+      </div>
+    </div>
+
+    <!-- SYNTAX -->
+    <div class="doc-section" id="syntax">
+      <h2><span data-en>Syntax</span><span data-ru>Синтаксис</span></h2>
+      <p class="sub" data-en>Familiar C-style syntax with dynamic types and built-in data structures.</p>
+      <p class="sub" data-ru>Знакомый C-подобный синтаксис с динамической типизацией и встроенными структурами данных.</p>
+      <div class="code-block">
+        <div class="code-header">
+          <div class="dots"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+          <span class="file-label">syntax.jash</span>
+        </div>
+        <pre><code><span class="c-cm"># Variables and types</span>
+name = <span class="c-str">"jash"</span>
+pi   = <span class="c-num">3.14</span>
+nums = [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>]
+obj  = {<span class="c-str">"key"</span>: <span class="c-str">"value"</span>}
+
+<span class="c-cm"># Control flow</span>
+<span class="c-kw">if</span> len(nums) &gt; <span class="c-num">0</span> {
+    <span class="c-builtin">print</span> nums[<span class="c-num">0</span>]
+}
+
+<span class="c-cm"># Functions</span>
+<span class="c-kw">fn</span> <span class="c-fn">add</span>(a, b) {
+    <span class="c-kw">return</span> a + b
+}
+
+<span class="c-cm"># Loops</span>
+<span class="c-kw">for</span> i <span class="c-kw">in</span> [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>] {
+    <span class="c-builtin">print</span> i
+}
+
+<span class="c-cm"># Lambda</span>
+result = <span class="c-fn">map</span>(arr, <span class="c-kw">fn</span>(x) { <span class="c-kw">return</span> x * <span class="c-num">2</span> })</code></pre>
+      </div>
+    </div>
+
+    <!-- BUILTINS -->
+    <div class="doc-section" id="builtins">
+      <h2>Builtins <span style="font-weight:400;color:var(--text-dim);font-size:1.2rem;">reference</span></h2>
+      <p class="sub" data-en>All global functions available in every Jash program.</p>
+      <p class="sub" data-ru>Все глобальные функции, доступные в любой программе на Jash.</p>
+
+      <div class="table-wrap">
+        <table data-lang-table="en">
+          <thead><tr><th>Name</th><th>Args</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>print</td><td>...any</td><td>Print values to stdout</td></tr>
+            <tr><td>print.green / .red / .yellow</td><td>...any</td><td>Colored print</td></tr>
+            <tr><td>len</td><td>string / array / obj</td><td>Return length</td></tr>
+            <tr><td>type</td><td>any</td><td>Return type name</td></tr>
+            <tr><td>say</td><td>string</td><td>Speak text aloud (cross-platform)</td></tr>
+            <tr><td>any</td><td>array / string</td><td>Random element / rune</td></tr>
+            <tr><td>serve</td><td>port, handler</td><td>Start HTTP server</td></tr>
+            <tr><td>file.read</td><td>path</td><td>Read file to string</td></tr>
+            <tr><td>file.write</td><td>path, text</td><td>Write string to file</td></tr>
+            <tr><td>time.sleep</td><td>seconds</td><td>Sleep for duration</td></tr>
+            <tr><td>time.start / time.stop</td><td>&mdash;</td><td>Measure elapsed time</td></tr>
+            <tr><td>ai.predict</td><td>text</td><td>Get AI prediction</td></tr>
+            <tr><td>ai.ollama</td><td>url</td><td>Ollama client (gen / chat / list)</td></tr>
+            <tr><td>image.ascii</td><td>path</td><td>Image to ASCII art</td></tr>
+            <tr><td>jash_ui.window</td><td>url</td><td>Open native webview</td></tr>
+          </tbody>
+        </table>
+        <table data-lang-table="ru">
+          <thead><tr><th>Имя</th><th>Аргументы</th><th>Описание</th></tr></thead>
+          <tbody>
+            <tr><td>print</td><td>...any</td><td>Вывод в stdout</td></tr>
+            <tr><td>print.green / .red / .yellow</td><td>...any</td><td>Цветной вывод</td></tr>
+            <tr><td>len</td><td>string / array / obj</td><td>Вернуть длину</td></tr>
+            <tr><td>type</td><td>any</td><td>Вернуть имя типа</td></tr>
+            <tr><td>say</td><td>string</td><td>Озвучить текст</td></tr>
+            <tr><td>any</td><td>array / string</td><td>Случайный элемент</td></tr>
+            <tr><td>serve</td><td>port, handler</td><td>HTTP-сервер</td></tr>
+            <tr><td>file.read</td><td>path</td><td>Прочитать файл</td></tr>
+            <tr><td>file.write</td><td>path, text</td><td>Записать файл</td></tr>
+            <tr><td>time.sleep</td><td>seconds</td><td>Пауза</td></tr>
+            <tr><td>time.start / time.stop</td><td>&mdash;</td><td>Замерить время</td></tr>
+            <tr><td>ai.predict</td><td>text</td><td>Предсказание ИИ</td></tr>
+            <tr><td>ai.ollama</td><td>url</td><td>Клиент Ollama</td></tr>
+            <tr><td>image.ascii</td><td>path</td><td>ASCII-арт</td></tr>
+            <tr><td>jash_ui.window</td><td>url</td><td>Нативное окно</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="doc-section" id="features">
+      <h2><span data-en>Features</span><span data-ru>Возможности</span></h2>
+      <p class="sub" data-en>Everything you need to write quick scripts and tools.</p>
+      <p class="sub" data-ru>Всё необходимое для быстрых скриптов и утилит.</p>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-head"><div class="icon"><span class="material-symbols-outlined">terminal</span></div><h3>REPL</h3></div>
+          <p data-en>Interactive loop with call-stack tracing. Type and see results instantly.</p>
+          <p data-ru>Интерактивный режим с трассировкой стека.</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="icon"><span class="material-symbols-outlined">bolt</span></div><h3>JIT</h3></div>
+          <p data-en>Bytecode compiler + VM with caching for hot paths.</p>
+          <p data-ru>Байткод-компилятор + VM с кешированием.</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="icon"><span class="material-symbols-outlined">record_voice_over</span></div><h3>TTS</h3></div>
+          <p data-en><code>say()</code> speaks aloud via goroutine — never blocks.</p>
+          <p data-ru><code>say()</code> озвучивает текст асинхронно.</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="icon"><span class="material-symbols-outlined">dns</span></div><h3>HTTP</h3></div>
+          <p data-en>One-line JSON API with <code>serve(port, handler)</code>.</p>
+          <p data-ru>JSON API одной строкой через <code>serve()</code>.</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="icon"><span class="material-symbols-outlined">description</span></div><h3>Files</h3></div>
+          <p data-en>Read/write files with <code>file.read()</code> and <code>file.write()</code>.</p>
+          <p data-ru>Чтение/запись через <code>file.read/write</code>.</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="icon"><span class="material-symbols-outlined">psychology</span></div><h3>AI</h3></div>
+          <p data-en>Local LLM inference via <code>ai.ollama()</code>.</p>
+          <p data-ru>Локальные LLM через <code>ai.ollama()</code>.</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="icon"><span class="material-symbols-outlined">image</span></div><h3>ASCII</h3></div>
+          <p data-en>Convert images to ASCII art in the terminal.</p>
+          <p data-ru>Конвертация изображений в ASCII-арт.</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="icon"><span class="material-symbols-outlined">open_in_new</span></div><h3>GUI</h3></div>
+          <p data-en>Native webview windows with <code>jash_ui.window()</code>.</p>
+          <p data-ru>Нативные окна через <code>jash_ui.window()</code>.</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="icon"><span class="material-symbols-outlined">timer</span></div><h3>Timer</h3></div>
+          <p data-en>Profile code with <code>time.start()</code> / <code>time.stop()</code>.</p>
+          <p data-ru>Профилирование через <code>time.start/stop</code>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RELEASES -->
+    <div class="doc-section" id="releases">
+      <h2><span data-en>Releases</span><span data-ru>Релизы</span></h2>
+      <p class="sub" data-en><a href="https://github.com/qwantuum/jash/releases" target="_blank">Full changelog on GitHub</a>.</p>
+      <p class="sub" data-ru><a href="https://github.com/qwantuum/jash/releases" target="_blank">Полный список изменений на GitHub</a>.</p>
+      <div class="release-card">
+        <div class="tag">v0.7.0 <span class="sub">Public Beta</span></div>
+        <div class="desc" data-en>REPL, JIT compiler, builtins (file I/O, HTTP server, AI, ASCII art, TTS, UI windows), timing, and more.</div>
+        <div class="desc" data-ru>REPL, JIT-компилятор, builtins (файлы, HTTP, AI, ASCII-арт, TTS, GUI), таймер и другое.</div>
+        <a href="https://github.com/qwantuum/jash/releases/tag/v0.7.0" class="link" target="_blank">GitHub <span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      Built with Go &middot; <a href="https://github.com/qwantuum/jash" target="_blank">github.com/qwantuum/jash</a>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const STORAGE_THEME = 'jash-theme';
+const STORAGE_LANG = 'jash-lang';
+
+function getPreferredTheme() {
+  const s = localStorage.getItem(STORAGE_THEME);
+  if (s === 'light' || s === 'dark') return s;
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme-icon').textContent = t === 'dark' ? 'dark_mode' : 'light_mode';
+  localStorage.setItem(STORAGE_THEME, t);
+}
+function toggleTheme() {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+function switchLang(l) {
+  document.documentElement.setAttribute('data-lang', l);
+  localStorage.setItem(STORAGE_LANG, l);
+  document.querySelectorAll('[data-lang-btn]').forEach(b => b.classList.toggle('active-lang', b.dataset.langBtn === l));
+  document.querySelectorAll('[data-lang-table]').forEach(t => { t.style.display = t.dataset.langTable === l ? '' : 'none'; });
+}
+function getPreferredLang() {
+  const s = localStorage.getItem(STORAGE_LANG);
+  if (s === 'en' || s === 'ru') return s;
+  return (navigator.language || '').startsWith('ru') ? 'ru' : 'en';
+}
+
+applyTheme(getPreferredTheme());
+switchLang(getPreferredLang());
+
+window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', e => {
+  if (!localStorage.getItem(STORAGE_THEME)) applyTheme(e.matches ? 'light' : 'dark');
+});
+
+// sidebar active on scroll
+const sections = document.querySelectorAll('.doc-section, .hero-block');
+const links = document.querySelectorAll('.sidebar-item');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const id = e.target.id || 'intro';
+      const link = document.querySelector(`.sidebar-item[href="#${id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-80px 0px -60% 0px' });
+sections.forEach(s => observer.observe(s.parentElement?.id ? s.parentElement : s));
+</script>
+
+</body>
+</html>

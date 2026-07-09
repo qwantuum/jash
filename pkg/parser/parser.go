@@ -160,6 +160,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseWhileStatement()
 	case token.REPEAT:
 		return p.parseRepeatStatement()
+	case token.IMPORT:
+		return p.parseImportStatement()
 	case token.IDENT:
 		if p.peekToken.Type == token.ASSIGN {
 			return p.parseAssignStatement()
@@ -591,4 +593,17 @@ func precedenceOf(t token.TokenType) int {
 	default:
 		return LOWEST
 	}
+}
+
+func (p *Parser) parseImportStatement() ast.Statement {
+	stmt := &ast.ImportStatement{}
+	p.nextToken()
+	if p.curToken.Type != token.IDENT {
+		p.errors = append(p.errors,
+			fmt.Sprintf("line %d: expected module name after import", p.curToken.Line))
+		return nil
+	}
+	stmt.Module = &ast.Identifier{Value: p.curToken.Literal}
+	p.nextToken()
+	return stmt
 }

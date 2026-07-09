@@ -351,6 +351,30 @@ type Object interface {
 
 ---
 
+## Модульная система: `import`
+
+Синтаксис импорта модуля:
+
+```jash
+import module_name
+```
+
+Доступные модули:
+
+| Модуль      | Функции                                                                 |
+|-------------|-------------------------------------------------------------------------|
+| `math`      | `sqrt()`, `abs()`, `floor()`, `ceil()`, `sin()`, `cos()` |
+| `random`    | `int(min, max)`, `float()`, `choice(array)` |
+| `time`      | `sleep(seconds)`, `now()`, `format(layout)` |
+| `file`      | `read(path)`, `write(path, content)`, `append(path, content)` |
+| `ai`        | `prompt(text)` — отправляет текст AI-модели и возвращает ответ |
+| `image`     | `load(path)`, `resize(img, w, h)`, `save(img, path)`, `create(w, h)` |
+| `jash_ui`   | `window(title, w, h, content)` — создаёт GUI-окно |
+
+**Встроенные функции** (доступны без импорта): `print()`, `len()`, `type()`, `say()`, `any()`, `serve()`
+
+---
+
 ## pkg/evaluator/jit.go — JIT-менеджер
 
 | Тип | Поля | Описание |

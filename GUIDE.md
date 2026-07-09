@@ -82,7 +82,37 @@ my_data = {
 
 ---
 
-## 🤖 4. Built-in AI Core Module (`ai`)
+## 📥 4. Module Import System
+
+Jash has a modular architecture. Core builtins (`print()`, `len()`, `type()`, `say()`, `any()`, `serve()`) are always available, but additional functionality is loaded via the `import` statement:
+
+```jash
+import math
+import random
+import time
+import file
+import ai
+import image
+import jash_ui
+```
+
+Simply write `import module_name` at the top of your script to enable that module's features.
+
+### Available Modules
+
+| Module      | Contents                                                                 |
+|-------------|--------------------------------------------------------------------------|
+| `math`      | `sqrt()`, `abs()`, `floor()`, `ceil()`, `sin()`, `cos()`                |
+| `random`    | `int(min, max)`, `float()`, `choice(array)`                              |
+| `time`      | `sleep(seconds)`, `now()`, `format(layout)`                              |
+| `file`      | `read(path)`, `write(path, content)`, `append(path, content)`            |
+| `ai`        | `prompt(text)` — sends text to an AI model and returns the response      |
+| `image`     | `load(path)`, `resize(img, w, h)`, `save(img, path)`, `create(w, h)`    |
+| `jash_ui`   | `window(title, w, h, content)` — creates a GUI window                    |
+
+---
+
+## 🤖 5. Built-in AI Core Module (`ai`)
 
 Jash is an **AI-native language**, meaning AI interaction capability is baked right into the core global runtime.
 
@@ -104,7 +134,7 @@ print(result.response)
 
 ---
 
-## 🌐 5. Web Backend (`serve`)
+## 🌐 6. Web Backend (`serve`)
 
 Jash exposes Go's `net/http` through a simple `serve(port, handler)` function:
 
@@ -124,7 +154,7 @@ The handler receives an object with `method`, `path`, `body`, and `query` fields
 
 ---
 
-## 🖼️ 6. ASCII Art from Images (`image`)
+## 🖼️ 7. ASCII Art from Images (`image`)
 
 Convert any image (local file or URL) to ASCII art in the console:
 
@@ -140,7 +170,7 @@ Uses PNG/JPEG/GIF decoding, resizes to 80 columns, and maps brightness to `@%#*+
 
 ---
 
-## 🪟 7. GUI Windows (`jash_ui`)
+## 🪟 8. GUI Windows (`jash_ui`)
 
 Create browser-based GUI windows with the `jash_ui` module:
 

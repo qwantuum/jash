@@ -412,16 +412,19 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 	leftExp := prefix()
 
-	for !p.curTokenIs(token.NEWLINE) && !p.curTokenIs(token.EOF) &&
-		precedence < p.peekPrecedence() {
-
-		infix := p.infixParseFns[p.peekToken.Type]
-		if infix == nil {
-			return leftExp
+	for !p.curTokenIs(token.NEWLINE) && !p.curTokenIs(token.EOF) {
+		if p.infixParseFns[p.curToken.Type] != nil && precedence <= p.curPrecedence() {
+			leftExp = p.infixParseFns[p.curToken.Type](leftExp)
+		} else if precedence < p.peekPrecedence() {
+			infix := p.infixParseFns[p.peekToken.Type]
+			if infix == nil {
+				break
+			}
+			p.nextToken()
+			leftExp = infix(leftExp)
+		} else {
+			break
 		}
-
-		p.nextToken()
-		leftExp = infix(leftExp)
 	}
 
 	return leftExp
